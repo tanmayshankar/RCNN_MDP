@@ -1,0 +1,18 @@
+<package>
+  <description brief="RCNN_MDP">
+
+     RCNN_MDP
+
+  </description>
+  <author>Tanmay</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/RCNN_MDP</url>
+  <depend package="rospy"/>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+  <depend package="sensor_msgs"/>
+
+</package>
+
+
