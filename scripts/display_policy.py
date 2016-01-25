@@ -41,11 +41,14 @@ basis_size=3
 basis_functions = npy.zeros(shape=(basis_size,discrete_size,discrete_size))
 
 # reward_weights = npy.loadtxt(str(sys.argv[2]))
-reward_weights = npy.zeros(basis_size)
+# reward_weights = npy.zeros(basis_size)
 
 optimal_policy = npy.loadtxt(str(sys.argv[1]))
 optimal_policy = optimal_policy.astype(int)
-reward_function = reward_weights[0]*basis_functions[0]+reward_weights[1]*basis_functions[1]+reward_weights[2]*basis_functions[2]
+# reward_function = reward_weights[0]*basis_functions[0]+reward_weights[1]*basis_functions[1]+reward_weights[2]*basis_functions[2]
+reward_function = npy.loadtxt(str(sys.argv[2]))
+value_function = npy.loadtxt(str(sys.argv[3]))
+# reward_function=npy.zeros(shape=(discrete_size,discrete_size))
 path_plot = copy.deepcopy(reward_function)
 max_val = npy.amax(path_plot)
 
@@ -80,11 +83,20 @@ def follow_policy():
 		current_pose[1] = next_pose[1]		
 		counter+=1
 
-		# dummy = raw_input("Continue? ")
-# follow_policy()
+		dummy = raw_input("Continue? ")
+follow_policy()
 
+# dummy = npy.amax(reward_function)
+# reward_function[3:6,6] = -dummy/4
+# reward_function[10,6] = -dummy/4
 
 imshow(optimal_policy, interpolation='nearest', origin='lower', extent=[0,10,0,10], aspect='auto')
+plt.show(block=False)
+colorbar()
+draw()
+show() 
+
+imshow(value_function, interpolation='nearest', origin='lower', extent=[0,10,0,10], aspect='auto')
 plt.show(block=False)
 colorbar()
 draw()
