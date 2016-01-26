@@ -47,7 +47,7 @@ optimal_policy = npy.loadtxt(str(sys.argv[1]))
 optimal_policy = optimal_policy.astype(int)
 # reward_function = reward_weights[0]*basis_functions[0]+reward_weights[1]*basis_functions[1]+reward_weights[2]*basis_functions[2]
 reward_function = npy.loadtxt(str(sys.argv[2]))
-value_function = npy.loadtxt(str(sys.argv[3]))
+value_function = npy.loadtxt(str(sys.argv[3]))/1000	
 # reward_function=npy.zeros(shape=(discrete_size,discrete_size))
 path_plot = copy.deepcopy(reward_function)
 max_val = npy.amax(path_plot)
@@ -90,18 +90,19 @@ def follow_policy():
 # reward_function[3:6,6] = -dummy/4
 # reward_function[10,6] = -dummy/4
 
-imshow(optimal_policy, interpolation='nearest', origin='lower', extent=[0,10,0,10], aspect='auto')
+imshow(optimal_policy, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 plt.show(block=False)
 colorbar()
 draw()
 show() 
 
-imshow(reward_function, interpolation='nearest', origin='lower', extent=[0,10,0,10], aspect='auto')
+imshow(reward_function, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 plt.show(block=False)
 colorbar()
 draw()
 show() 
 
+print "Hellu"
 imshow(value_function, interpolation='nearest', origin='lower', extent=[0,10,0,10], aspect='auto')
 plt.show(block=False)
 colorbar()
@@ -134,25 +135,20 @@ for i in range(0,discrete_size):
 		# U[i,j]=x[i,j]/(abs(x[i,j])+abs(y[i,j]))
 		# V[i,j]=y[i,j]/(abs(x[i,j])+abs(y[i,j]))
 
-
 # pl.axes([0.025, 0.025, 0.95, 0.95])
 print U,V
 
-# pl.quiver(X, Y, U, V, 10, alpha=.5)
-pl.quiver(X,Y,U,V,reward_function,alpha=1)
-pl.quiver(X, Y, U, V, edgecolor='k', facecolor='None', linewidth=.1)
+# # pl.quiver(X, Y, U, V, 10, alpha=.5)
+# pl.quiver(X,Y,U,V,reward_function,alpha=1)
+# pl.quiver(X, Y, U, V, edgecolor='k', facecolor='None', linewidth=.1)
 
-pl.xlim(0, n)
-pl.xticks(())
-pl.ylim(0, n)
-pl.yticks(())
+# pl.xlim(0, n)
+# pl.xticks(())
+# pl.ylim(0, n)
+# pl.yticks(())
 
-pl.show() 
+# pl.show() 
 
-
-
-print "HELLLOOOOOOOOOOOOOOOOOOOo"
-# y,x= npy.mgrid[0:50,0:50]
 fig, ax = plt.subplots()
 im = ax.imshow(reward_function, origin='lower',extent=[0,50,0,50])
 # im = ax.imshow(value_function, extent=[0,50,0,50])
