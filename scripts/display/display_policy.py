@@ -84,13 +84,19 @@ def follow_policy():
 		counter+=1
 
 		dummy = raw_input("Continue? ")
-follow_policy()
+# follow_policy()
 
 # dummy = npy.amax(reward_function)
 # reward_function[3:6,6] = -dummy/4
 # reward_function[10,6] = -dummy/4
 
 imshow(optimal_policy, interpolation='nearest', origin='lower', extent=[0,10,0,10], aspect='auto')
+plt.show(block=False)
+colorbar()
+draw()
+show() 
+
+imshow(reward_function, interpolation='nearest', origin='lower', extent=[0,10,0,10], aspect='auto')
 plt.show(block=False)
 colorbar()
 draw()
@@ -112,23 +118,46 @@ X, Y = np.mgrid[0:n, 0:n]
 # U = action_space[optimal_policy[:,:]][0]
 # V = action_space[optimal_policy[:,:]][1]
 
+
 U = npy.zeros(shape=(discrete_size,discrete_size))
 V = npy.zeros(shape=(discrete_size,discrete_size))
+x = npy.zeros(shape=(discrete_size,discrete_size))
+y = npy.zeros(shape=(discrete_size,discrete_size))
 
 for i in range(0,discrete_size):
 	for j in range(0,discrete_size):
+		# x[i,j] = action_space[optimal_policy[i,j]][0]
+		# y[i,j] = action_space[optimal_policy[i,j]][1]
+
 		U[i,j] = action_space[optimal_policy[i,j]][0]
 		V[i,j] = action_space[optimal_policy[i,j]][1]
+		# U[i,j]=x[i,j]/(abs(x[i,j])+abs(y[i,j]))
+		# V[i,j]=y[i,j]/(abs(x[i,j])+abs(y[i,j]))
+
 
 # pl.axes([0.025, 0.025, 0.95, 0.95])
 print U,V
 
-pl.quiver(X, Y, U, V, 10, alpha=.5)
-pl.quiver(X, Y, U, V, edgecolor='k', facecolor='None', linewidth=.5)
+# pl.quiver(X, Y, U, V, 10, alpha=.5)
+pl.quiver(X,Y,U,V,reward_function,alpha=1)
+pl.quiver(X, Y, U, V, edgecolor='k', facecolor='None', linewidth=.1)
 
-pl.xlim(-1, n)
+pl.xlim(0, n)
 pl.xticks(())
-pl.ylim(-1, n)
+pl.ylim(0, n)
 pl.yticks(())
 
-pl.show()
+pl.show() 
+
+
+
+print "HELLLOOOOOOOOOOOOOOOOOOOo"
+# y,x= npy.mgrid[0:50,0:50]
+fig, ax = plt.subplots()
+im = ax.imshow(reward_function, origin='lower',extent=[0,50,0,50])
+# im = ax.imshow(value_function, extent=[0,50,0,50])
+ax.quiver(V,U)
+
+fig.colorbar(im)
+ax.set(aspect=1, title='Quiver Plot')
+plt.show()
