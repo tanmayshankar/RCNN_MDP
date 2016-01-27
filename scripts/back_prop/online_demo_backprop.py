@@ -116,7 +116,9 @@ def belief_prop(action_index):
 	# global target_belief
 
 	to_state_belief = signal.convolve2d(from_state_belief,trans_mat_unknown[action_index],'same','fill',0)
-	from_state_belief = to_state_belief
+	if (to_state_belief.sum()<1.):
+		to_state_belief /= to_state_belief.sum()
+	# from_state_belief = to_state_belief
 
 def back_prop(action_index):
 	global trans_mat_unknown
@@ -125,7 +127,7 @@ def back_prop(action_index):
 	global target_belief
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.1
+	alpha = 0.01
 
 	for ai in range(-1,transition_space/2+1):
 		for aj in range(-1,transition_space/2+1):
@@ -138,7 +140,9 @@ def back_prop(action_index):
 						aj=0					
 					loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
-			trans_mat_unknown[action_index,ai,aj] += alpha * loss[ai,aj]
+			trans_mat_unknown[action_index,ai,aj] -= alpha * loss[ai,aj]
+			if (trans_mat_unknown[action_index,ai,aj]<0):
+				trans_mat_unknown[action_index,ai,aj]=0
 	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
 def master(action_index):
@@ -156,9 +160,10 @@ def master(action_index):
 	# calculate_target([23+t,24])
 	# calculate_target
 
-	back_prop(0)
+	back_prop(action_index)
+	from_state_belief = to_state_belief
 	print "current_pose:",current_pose
-	print "Transition Matrix.\n",trans_mat_unknown[action_index,:,:]
+	print "Transition Matrix: ",action_index,"\n",trans_mat_unknown[action_index,:,:]
 
 # dummy = 'y'
 # t=0
@@ -174,8 +179,10 @@ def master(action_index):
 state_counter = 0
 action = 'w'
 
+print trans_mat_unknown
 while (action!='q'):		
 ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
+		# 
 		if action=='w':			
 			state_counter+=1	
 			# current_demo.append([current_pose[0]+1,current_pose[1]])
