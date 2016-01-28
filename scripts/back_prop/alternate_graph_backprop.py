@@ -49,8 +49,11 @@ trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
 
 def conv_transition_filters():
 	global trans_mat
-	trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
-	trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
+	trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
+	trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+
+	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
+	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
 	
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)
@@ -86,6 +89,14 @@ current_pose=[24,24]
 
 trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
 
+def reset_belief():
+	global current_pose
+	max_val_location = npy.unravel_index(npy.argmax(from_state_belief),from_state_belief.shape)
+	print "Reset:",max_val_location
+	from_state_belief[:,:]=0.
+	from_state_belief[max_val_location[0],max_val_location[1]]=1.
+
+
 def initialize_unknown_transitions():
 	global trans_mat_unknown
 	# global to_state_belief
@@ -113,6 +124,8 @@ def calculate_target(action_index):
 	# target_belief[to_state[0],to_state[1]]=1.
 	target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
+	if (target_belief.sum()<1.):
+		target_belief /= target_belief.sum()
 
 def belief_prop(action_index):
 	global trans_mat_unknown
@@ -132,31 +145,45 @@ def back_prop(action_index):
 	global target_belief
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.1
+	alpha = 1
 
 	w = transition_space/2
-
+	print "W:",w
 	# for ai in range(-transition_space/2,transition_space/2+1):
 		# for aj in range(-transition_space/2,transition_space/2+1):
 
+	print "From:"
+	for i in range(20,30):
+		print from_state_belief[i,20:30]
+	print "To:"
+	for i in range(20,30):
+		print to_state_belief[i,20:30]
+	print "Target:",
+	for i in range(20,30):
+		print target_belief[i,20:30]
+
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
-
-			for i in range(1,discrete_size-1):
-				for j in range(1,discrete_size-1):
-					# if ((ai+i)>49)or((ai+i)<0):
+			for i in range(0,discrete_size-2):
+				for j in range(0,discrete_size-2):
+					# if ((ai+i)>49)or((ai+i)<0)or((aj+j)>49)or((aj+j)<0):
+						# continue
+						# print "reached",i,j
+						# break
 					# 	ai=0
 					# 	print "AI 1"
-					# if ((aj+j)>49)or((aj+j)<0):
 					# 	aj=0		
 					# 	print "AJ  1"			
+
+
+
 					loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
 			trans_mat_unknown[action_index,ai,aj] -= alpha * loss[ai,aj]
 			if (trans_mat_unknown[action_index,ai,aj]<0):
 				trans_mat_unknown[action_index,ai,aj]=0
-	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
+			trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
 def master(action_index):
 	global trans_mat_unknown
@@ -165,15 +192,18 @@ def master(action_index):
 	global target_belief
 	global current_pose
 
+	if (random.random()>0.):
+		reset_belief()
+
 	belief_prop(action_index)
 	calculate_target(action_index)
-
 	back_prop(action_index)
 	
-
 	# from_state_belief = to_state_belief
 	##### IN THE ALTERNATE GRAPH, WE UPDATE FROM_STATE_BELIEF AS TARGET_BELIEF
 	from_state_belief = target_belief
+	if (from_state_belief.sum()<1.):
+		from_state_belief /= from_state_belief.sum()
 
 
 	print "current_pose:",current_pose
