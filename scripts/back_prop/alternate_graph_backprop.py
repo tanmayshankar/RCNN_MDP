@@ -66,9 +66,10 @@ def conv_transition_filters():
 		trans_mat[i] = npy.fliplr(trans_mat[i])
 		trans_mat[i] = npy.flipud(trans_mat[i])
 
+
 conv_transition_filters()
 
-# print "Transition Matrices:\n",trans_mat
+print "Transition Matrices:\n",trans_mat
 
 # print "\nHere's the reward.\n"
 # for i in range(0,discrete_size):
@@ -93,7 +94,8 @@ def initialize_unknown_transitions():
 
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
-			trans_mat_unknown[:,i,j] = random.random()
+	# 		trans_mat_unknown[:,i,j] = random.random()
+			trans_mat_unknown[:,i,j] = 1.
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
 
@@ -132,16 +134,24 @@ def back_prop(action_index):
 	loss = npy.zeros(shape=(transition_space,transition_space))
 	alpha = 0.1
 
-	for ai in range(-1,transition_space/2+1):
-		for aj in range(-1,transition_space/2+1):
+	w = transition_space/2
 
-			for i in range(0,discrete_size):
-				for j in range(0,discrete_size):
-					if ((ai+i)>49)or((ai+i)<0):
-						ai=0
-					if ((aj+j)>49)or((aj+j)<0):
-						aj=0					
-					loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
+	# for ai in range(-transition_space/2,transition_space/2+1):
+		# for aj in range(-transition_space/2,transition_space/2+1):
+
+	for ai in range(-w,w+1):
+		for aj in range(-w,w+1):
+
+			for i in range(1,discrete_size-1):
+				for j in range(1,discrete_size-1):
+					# if ((ai+i)>49)or((ai+i)<0):
+					# 	ai=0
+					# 	print "AI 1"
+					# if ((aj+j)>49)or((aj+j)<0):
+					# 	aj=0		
+					# 	print "AJ  1"			
+					loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
+					# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
 			trans_mat_unknown[action_index,ai,aj] -= alpha * loss[ai,aj]
 			if (trans_mat_unknown[action_index,ai,aj]<0):
@@ -167,7 +177,8 @@ def master(action_index):
 
 
 	print "current_pose:",current_pose
-	print "Transition Matrix: ",action_index,"\n",trans_mat_unknown[action_index,:,:]
+	print "Transition Matrix: ",action_index,"\n"
+	print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
 # dummy = 'y'
 # t=0
@@ -187,6 +198,7 @@ print trans_mat_unknown
 while (action!='q'):		
 ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
 		# 
+		action = raw_input("Hit a key now: ")
 		if action=='w':			
 			state_counter+=1	
 			# current_demo.append([current_pose[0]+1,current_pose[1]])
@@ -242,7 +254,7 @@ while (action!='q'):
 		# path_plot[current_pose[0]][current_pose[1]]=1				
 		master(action_index)
 
-		action = raw_input("Hit a key now: ")
+		
 
 def conv_layer():	
 	global value_function
