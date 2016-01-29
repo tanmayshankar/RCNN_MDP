@@ -117,6 +117,8 @@ initialize_unknown_transitions()
 def observation_model():
 	print "bleh"
 
+observation_model()
+
 def calculate_target(action_index):
 	# global trans_mat_unknown
 	# global to_state_belief
