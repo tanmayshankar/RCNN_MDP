@@ -177,14 +177,23 @@ def back_prop(action_index):
 
 
 
-					loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
+			# 		loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
+			# 		# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
+
+			# trans_mat_unknown[action_index,ai,aj] -= alpha * loss[ai,aj]
+			# if (trans_mat_unknown[action_index,ai,aj]<0):
+			# 	trans_mat_unknown[action_index,ai,aj]=0
+			# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
+
+					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
-			trans_mat_unknown[action_index,ai,aj] -= alpha * loss[ai,aj]
-			if (trans_mat_unknown[action_index,ai,aj]<0):
-				trans_mat_unknown[action_index,ai,aj]=0
+			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
+			if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
+				trans_mat_unknown[action_index,w+ai,w+aj]=0
 			trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
+			
 def master(action_index):
 	global trans_mat_unknown
 	global to_state_belief

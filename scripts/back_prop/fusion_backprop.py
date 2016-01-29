@@ -114,8 +114,13 @@ initialize_unknown_transitions()
 
 # def calculate_target(from_state,to_state,action_index):
 # def calculate_target(to_state):
+obs_space = 5
+observation_model = npy.zeros(shape=(obs_space,obs_space))
+
 def observation_model():
-	print "bleh"
+	# print "bleh"
+	observation_model[]
+
 
 observation_model()
 
@@ -194,12 +199,12 @@ def back_prop(action_index):
 
 
 
-					loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
+					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
-			trans_mat_unknown[action_index,ai,aj] -= alpha * loss[ai,aj]
-			if (trans_mat_unknown[action_index,ai,aj]<0):
-				trans_mat_unknown[action_index,ai,aj]=0
+			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
+			if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
+				trans_mat_unknown[action_index,w+ai,w+aj]=0
 			trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
 def master(action_index):
