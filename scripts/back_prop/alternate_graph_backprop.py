@@ -93,8 +93,8 @@ def reset_belief():
 	global current_pose
 	max_val_location = npy.unravel_index(npy.argmax(from_state_belief),from_state_belief.shape)
 	print "Reset:",max_val_location
-	from_state_belief[:,:]=0.
-	from_state_belief[max_val_location[0],max_val_location[1]]=1.
+	# from_state_belief[:,:]=0.
+	# from_state_belief[max_val_location[0],max_val_location[1]]=1.
 
 
 def initialize_unknown_transitions():
@@ -166,16 +166,6 @@ def back_prop(action_index):
 		for aj in range(-w,w+1):
 			for i in range(0,discrete_size-2):
 				for j in range(0,discrete_size-2):
-					# if ((ai+i)>49)or((ai+i)<0)or((aj+j)>49)or((aj+j)<0):
-						# continue
-						# print "reached",i,j
-						# break
-					# 	ai=0
-					# 	print "AI 1"
-					# 	aj=0		
-					# 	print "AJ  1"			
-
-
 
 			# 		loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 			# 		# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
@@ -188,12 +178,12 @@ def back_prop(action_index):
 					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
-			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
+			trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
 			if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
 				trans_mat_unknown[action_index,w+ai,w+aj]=0
 			trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
-			
+
 def master(action_index):
 	global trans_mat_unknown
 	global to_state_belief
@@ -201,8 +191,8 @@ def master(action_index):
 	global target_belief
 	global current_pose
 
-	if (random.random()>0.):
-		reset_belief()
+	# if (random.random()>0.):
+	# 	reset_belief()
 
 	belief_prop(action_index)
 	calculate_target(action_index)

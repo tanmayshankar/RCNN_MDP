@@ -68,9 +68,9 @@ def conv_transition_filters():
 	trans_mat[7] = npy.rot90(trans_mat_2,2)
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
-	for i in range(0,action_size):
-		trans_mat[i] = npy.fliplr(trans_mat[i])
-		trans_mat[i] = npy.flipud(trans_mat[i])
+	# for i in range(0,action_size):
+	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
+	# 	trans_mat[i] = npy.flipud(trans_mat[i])
 
 
 conv_transition_filters()
@@ -101,6 +101,10 @@ def reset_belief():
 	# from_state_belief[max_val_location[0],max_val_location[1]]=1.
 	from_state_belief[current_pose[0],current_pose[1]]=1.
 	# print "Reset. ", from_state_belief
+
+def fuse_observations():
+	print "Dummy"
+
 
 def initialize_unknown_transitions():
 	global trans_mat_unknown
@@ -143,9 +147,9 @@ def belief_prop(action_index):
 	if (to_state_belief.sum()<1.):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
-	print "To state belief."
-	for i in range(0,discrete_size):
-		print to_state_belief[i,:]
+	# print "To state belief."
+	# for i in range(0,discrete_size):
+	# 	print to_state_belief[i,:]
 
 def back_prop(action_index):
 	global trans_mat_unknown
@@ -162,14 +166,20 @@ def back_prop(action_index):
 		# for aj in range(-transition_space/2,transition_space/2+1):
 
 	print "From:"
-	for i in range(20,30):
-		print from_state_belief[i,20:30]
+	# for i in range(20,30):
+		# print from_state_belief[i,20:30]
+	for i in range(0,50):
+		print from_state_belief[i,0:50]
 	print "To:"
-	for i in range(20,30):
-		print to_state_belief[i,20:30]
+	# for i in range(20,30):
+		# print to_state_belief[i,20:30]
+	for i in range(0,50):
+		print to_state_belief[i,0:50]
 	print "Target:",
-	for i in range(20,30):
-		print target_belief[i,20:30]
+	# for i in range(20,30):
+		# print target_belief[i,20:30]
+	for i in range(0,50):	
+		print target_belief[i,0:50]
 
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
@@ -187,7 +197,7 @@ def back_prop(action_index):
 					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
-			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
+			trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
 			if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
 				trans_mat_unknown[action_index,w+ai,w+aj]=0
 			
@@ -219,7 +229,8 @@ def master(action_index):
 
 	print "current_pose:",current_pose
 	print "Transition Matrix: ",action_index,"\n"
-	print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
+	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
+	print trans_mat_unknown[action_index,:,:]
 
 # dummy = 'y'
 # t=0
