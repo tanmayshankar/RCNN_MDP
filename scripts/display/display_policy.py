@@ -48,13 +48,14 @@ max_val = npy.amax(path_plot)
 action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
 
-imshow(optimal_policy, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+
+imshow(reward_function, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 plt.show(block=False)
 colorbar()
 draw()
 show() 
 
-imshow(reward_function, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+imshow(optimal_policy, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 plt.show(block=False)
 colorbar()
 draw()
@@ -85,8 +86,16 @@ for i in range(0,discrete_size):
 
 fig, ax = plt.subplots()
 im = ax.imshow(reward_function, origin='lower',extent=[0,50,0,50])
+# im = ax.imshow(value_function, origin='lower',extent=[0,50,0,50])
 ax.quiver(V,U)
+fig.colorbar(im)
+ax.set(aspect=1, title='Quiver Plot')
+plt.show()
 
+fig, ax = plt.subplots()
+# im = ax.imshow(reward_function, origin='lower',extent=[0,50,0,50])
+im = ax.imshow(value_function, origin='lower',extent=[0,50,0,50])
+ax.quiver(V,U)
 fig.colorbar(im)
 ax.set(aspect=1, title='Quiver Plot')
 plt.show()
