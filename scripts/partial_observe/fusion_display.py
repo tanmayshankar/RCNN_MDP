@@ -56,8 +56,7 @@ action = 'w'
 
 
 def initialize_state():
-	global current_pose
-	global from_state_belief
+	global current_pose, from_state_belief
 
 	from_state_belief[24,24]=0.2
 	from_state_belief[25,24]=0.8
@@ -114,9 +113,11 @@ def initialize_all():
 	initialize_unknown_transitions()
 
 def fuse_observations():
-	global from_state_belief
-	global current_pose
-	global observation_model
+	# global from_state_belief
+	# global current_pose
+	# global observation_model
+	
+	global from_state_belief, current_pose, observation_model
 
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
 
@@ -172,8 +173,7 @@ def calculate_target(action_index):
 	# 	target_belief /= target_belief.sum()
 
 def simulated_model(action_index):
-	global trans_mat
-	global from_state_belief
+	global trans_mat, from_state_belief
 
 	#### BASED ON THE TRANSITION MODEL CORRESPONDING TO ACTION_INDEX, PROBABILISTICALLY FIND THE NEXT SINGLE STATE.
 	#must find the right bucket
@@ -211,10 +211,7 @@ def simulated_model(action_index):
 
 
 def belief_prop(action_index):
-	global trans_mat_unknown
-	global to_state_belief
-	global from_state_belief
-	# global target_belief
+	global trans_mat_unknown, to_state_belief, from_state_belief	
 
 	to_state_belief = signal.convolve2d(from_state_belief,trans_mat_unknown[action_index],'same','fill',0)
 	if (to_state_belief.sum()<1.):
@@ -222,10 +219,12 @@ def belief_prop(action_index):
 	# from_state_belief = to_state_belief
 
 def back_prop(action_index):
-	global trans_mat_unknown
-	global to_state_belief
-	global from_state_belief
-	global target_belief
+	# global trans_mat_unknown
+	# global to_state_belief
+	# global from_state_belief
+	# global target_belief
+
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
 	alpha = 0.1
@@ -264,35 +263,30 @@ def back_prop(action_index):
 				trans_mat_unknown[action_index,w+ai,w+aj]=0
 			trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
-def master(action_index):
-	global trans_mat_unknown
-	global to_state_belief
-	global from_state_belief
-	global target_belief
-	global current_pose
+def recurrence():
+	global from_state_belief,target_belief
+	from_state_belief = target_belief
 
-	# fuse_observations()
+def master(action_index):
+	# global trans_mat_unknown
+	# global to_state_belief
+	# global from_state_belief
+	# global target_belief
+	# global current_pose
+
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
+
 	belief_prop(action_index)
 	bayes_obs_fusion()
-	# calculate_target(action_index)
-
-
-
+	simulated_model(action_index)
 	back_prop(action_index)
+	recurrence()	
 	
-	# from_state_belief = to_state_belief
-	##### IN THE ALTERNATE GRAPH, WE UPDATE FROM_STATE_BELIEF AS TARGET_BELIEF
-
-	from_state_belief = target_belief
-	# fuse_observations()
-	# back_prop(action_index)
-
 	print "current_pose:",current_pose
 	print "Transition Matrix: ",action_index,"\n"
 	print trans_mat_unknown[action_index,:,:]
 	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
-#print trans_mat_unknown
 initialize_all()
 
 def input_actions():
