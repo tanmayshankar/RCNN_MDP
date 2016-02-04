@@ -11,6 +11,10 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
+
+
+###### DEFINITIONS
+
 basis_size = 3
 discrete_size = 50
 
@@ -28,10 +32,36 @@ time_limit = 100
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
 optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
 
+#### DEFINING DISCOUNT FACTOR
 gamma = 0.95
 # gamma = 1.
 
+#### DEFINING TRANSITION RELATED VARIABLES
 trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
+trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
+
+
+#### DEFINING STATE BELIEF VARIABLES
+to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
+from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
+target_belief = npy.zeros(shape=(discrete_size,discrete_size))
+
+#### DEFINING OBSERVATION RELATED VARIABLES
+obs_space = 3
+observation_model = npy.zeros(shape=(obs_space,obs_space))
+obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
+
+state_counter = 0
+action = 'w'
+
+
+def initialize_state():
+	global current_pose
+	global from_state_belief
+
+	from_state_belief[24,24]=0.2
+	from_state_belief[25,24]=0.8
+	current_pose=[24,24]
 
 def initialize_transitions():
 	global trans_mat
@@ -55,18 +85,7 @@ def initialize_transitions():
 	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
 	# 	trans_mat[i] = npy.flipud(trans_mat[i])
 
-print "Transition Matrices:\n",trans_mat
-
-to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-target_belief = npy.zeros(shape=(discrete_size,discrete_size))
-
-from_state_belief[24,24]=0.2
-from_state_belief[25,24]=0.8
-
-current_pose=[24,24]
-
-trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
+	print "Transition Matrices:\n",trans_mat
 
 def initialize_unknown_transitions():
 	global trans_mat_unknown
@@ -78,10 +97,6 @@ def initialize_unknown_transitions():
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
 
-obs_space = 3
-observation_model = npy.zeros(shape=(obs_space,obs_space))
-obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
-
 def initialize_unknown_observation():
 	global obs_model_unknown
 	obs_model_unknown = obs_model_unknown/obs_model_unknown.sum()
@@ -92,12 +107,13 @@ def initialize_observation():
 	print observation_model
 
 def initialize_all():
+	initialize_state()
 	initialize_observation()
 	initialize_transitions()
 	initialize_unknown_observation()
 	initialize_unknown_transitions()
 
-initialize_all()
+
 
 def fuse_observations():
 	global from_state_belief
@@ -115,10 +131,8 @@ def fuse_observations():
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 
-	print "Dummy.",dummy
+	# print "Dummy.",dummy
 	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
-
-# observation_model()
 
 def calculate_target(action_index):
 	# global trans_mat_unknown
@@ -223,70 +237,75 @@ def master(action_index):
 	print trans_mat_unknown[action_index,:,:]
 	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
-state_counter = 0
-action = 'w'
+#print trans_mat_unknown
+initialize_all()
 
-print trans_mat_unknown
-while (action!='q'):		
-############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
-		# 
-		action = raw_input("Hit a key now: ")
-		if action=='w':			
-			state_counter+=1	
-			# current_demo.append([current_pose[0]+1,current_pose[1]])
-			current_pose[0]+=1			
-			action_index=0
+def input_actions():
+	global action
+	global state_counter
+	global action_index
+	global current_pose
 
-		if action=='a':			
-			state_counter+=1		
-			# current_demo.append([current_pose[0],current_pose[1]-1])
-			current_pose[1]-=1			
-			action_index=2
+	while (action!='q'):		
+	############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
+			# 
+			action = raw_input("Hit a key now: ")
+			if action=='w':			
+				state_counter+=1	
+				# current_demo.append([current_pose[0]+1,current_pose[1]])
+				current_pose[0]+=1			
+				action_index=0
 
-		if action=='d':			
-			state_counter+=1
-			# current_demo.append([current_pose[0],current_pose[1]+1])
-			current_pose[1]+=1
-			action_index=1
+			if action=='a':			
+				state_counter+=1		
+				# current_demo.append([current_pose[0],current_pose[1]-1])
+				current_pose[1]-=1			
+				action_index=2
 
-		if action=='s':			
-			state_counter+=1
-			# current_demo.append([current_pose[0]-1,current_pose[1]])
-			current_pose[0]-=1
-			action_index=3
+			if action=='d':			
+				state_counter+=1
+				# current_demo.append([current_pose[0],current_pose[1]+1])
+				current_pose[1]+=1
+				action_index=1
 
-		if ((action=='wa')or(action=='aw')):			
-			state_counter+=1	
-			# current_demo.append([current_pose[0]+1,current_pose[1]-1])
-			current_pose[0]+=1	
-			current_pose[1]-=1						
-			action_index=4
+			if action=='s':			
+				state_counter+=1
+				# current_demo.append([current_pose[0]-1,current_pose[1]])
+				current_pose[0]-=1
+				action_index=3
 
-		if ((action=='sa')or(action=='as')):					
-			state_counter+=1		
-			# current_demo.append([current_pose[0]-1,current_pose[1]-1])
-			current_pose[1]-=1
-			current_pose[0]-=1		
-			action_index=6
+			if ((action=='wa')or(action=='aw')):			
+				state_counter+=1	
+				# current_demo.append([current_pose[0]+1,current_pose[1]-1])
+				current_pose[0]+=1	
+				current_pose[1]-=1						
+				action_index=4
 
-		if ((action=='sd')or(action=='ds')):					
-			state_counter+=1
-			# current_demo.append([current_pose[0]-1,current_pose[1]+1])
-			current_pose[1]+=1
-			current_pose[0]-=1
-			action_index=7
+			if ((action=='sa')or(action=='as')):					
+				state_counter+=1		
+				# current_demo.append([current_pose[0]-1,current_pose[1]-1])
+				current_pose[1]-=1
+				current_pose[0]-=1		
+				action_index=6
 
-		if ((action=='wd')or(action=='dw')):					
-			state_counter+=1
-			# current_demo.append([current_pose[0]+1,current_pose[1]+1])
-			current_pose[0]+=1			
-			current_pose[1]+=1			
-			action_index=5
+			if ((action=='sd')or(action=='ds')):					
+				state_counter+=1
+				# current_demo.append([current_pose[0]-1,current_pose[1]+1])
+				current_pose[1]+=1
+				current_pose[0]-=1
+				action_index=7
 
-		# path_plot[current_pose[0]][current_pose[1]]=1				
-		master(action_index)
+			if ((action=='wd')or(action=='dw')):					
+				state_counter+=1
+				# current_demo.append([current_pose[0]+1,current_pose[1]+1])
+				current_pose[0]+=1			
+				current_pose[1]+=1			
+				action_index=5
 
+			# path_plot[current_pose[0]][current_pose[1]]=1				
+			master(action_index)
 
+input_actions()
 
 
 
