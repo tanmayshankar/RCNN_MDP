@@ -2,39 +2,26 @@
 import numpy as npy
 import matplotlib.pyplot as plt
 import rospy
-# from std_msgs.msg import String
-# import roslib
 import sys
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt 
+# import matplotlib.pyplot as plt 
 import random
 from scipy.stats import rankdata
 from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
+
 basis_size = 3
 discrete_size = 50
 
 #Action size also determines number of convolutional filters. 
 action_size = 8
-# action_space = [[0,1],[1,0],[0,-1],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]
 action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
-
-# basis_functions = npy.loadtxt(str(sys.argv[1]))
-# reward_weights = npy.loadtxt(str(sys.argv[2]))
-# basis_functions = basis_functions.reshape((basis_size,discrete_size,discrete_size))
-
-# reward_function = basis_functions[0]*reward_weights[0]+basis_functions[2]*reward_weights[2]+basis_functions[1]*reward_weights[1]
-
-#Static / instantaneous reward. 
-# reward_function = npy.loadtxt(str(sys.argv[1]))
-# reward_function = basis_functions[0,:,:]
-# reward_function /=1000.0 
 
 time_limit = 100
 
@@ -68,36 +55,24 @@ def conv_transition_filters():
 	trans_mat[7] = npy.rot90(trans_mat_2,2)
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
-	# for i in range(0,action_size):
-	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
-	# 	trans_mat[i] = npy.flipud(trans_mat[i])
-
+	for i in range(0,action_size):
+		trans_mat[i] = npy.fliplr(trans_mat[i])
+		trans_mat[i] = npy.flipud(trans_mat[i])
 
 conv_transition_filters()
 
 print "Transition Matrices:\n",trans_mat
 
-# print "\nHere's the reward.\n"
-# for i in range(0,discrete_size):
-# 	print reward_function[i]
-
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 target_belief = npy.zeros(shape=(discrete_size,discrete_size))
 
-from_state_belief[24,24]=0.8
-from_state_belief[25,24]=0.2
+from_state_belief[24,24]=0.2
+from_state_belief[25,24]=0.8
 
 current_pose=[24,24]
 
 trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
-
-# def reset_belief():
-# 	global current_pose
-# 	max_val_location = npy.unravel_index(npy.argmax(from_state_belief),from_state_belief.shape)
-# 	print "Reset:",max_val_location
-# 	from_state_belief[:,:]=0.
-# 	from_state_belief[max_val_location[0],max_val_location[1]]=1.
 
 def initialize_unknown_transitions():
 	global trans_mat_unknown
@@ -117,7 +92,7 @@ observation_model = npy.zeros(shape=(obs_space,obs_space))
 def initialize_observation():
 	# print "bleh"
 	global observation_model
-	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
+	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
 	print observation_model
 
 initialize_observation()
@@ -129,11 +104,16 @@ def fuse_observations():
 
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
 
-	l = obs_space/2
-	for i in range(-l,l+1):
-		for j in range(-l,l+1):
-			dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
+	# l = obs_space/2
+	# for i in range(-l,l+1):
+	# 	for j in range(-l,l+1):
+	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
 
+	for i in range(0,obs_space):
+		for j in range(0,obs_space):
+			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
+
+	print "Dummy.",dummy
 	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
 
 # observation_model()
@@ -161,7 +141,7 @@ def calculate_target(action_index):
 	
 
 	# if (target_belief.sum()<1.):
-	# 	target_belief /= target_belief.sum(
+	# 	target_belief /= target_belief.sum()
 
 def belief_prop(action_index):
 	global trans_mat_unknown
@@ -181,7 +161,7 @@ def back_prop(action_index):
 	global target_belief
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.01
+	alpha = 0.1
 
 	w = transition_space/2
 	print "W:",w
@@ -204,6 +184,7 @@ def back_prop(action_index):
 	# for i in range(0,50):	
 	# 	print target_belief[i,0:50]
 
+
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
 			for i in range(0,discrete_size-2):
@@ -216,6 +197,30 @@ def back_prop(action_index):
 				trans_mat_unknown[action_index,w+ai,w+aj]=0
 			trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
+
+def display_beliefs():
+	global to_state_belief
+	global from_state_belief
+	global target_belief
+
+	imshow(from_state_belief, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+	plt.show(block=False)
+	colorbar()
+	draw()
+	show()
+
+	imshow(target_belief, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+	plt.show(block=False)
+	colorbar()
+	draw()
+	show() 
+
+	imshow(to_state_belief, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+	plt.show(block=False)
+	colorbar()
+	draw()
+	show() 
+
 def master(action_index):
 	global trans_mat_unknown
 	global to_state_belief
@@ -223,9 +228,7 @@ def master(action_index):
 	global target_belief
 	global current_pose
 
-	# if (random.random()>0.):
-	# 	reset_belief()
-
+	fuse_observations()
 	belief_prop(action_index)
 	calculate_target(action_index)
 	back_prop(action_index)
@@ -234,12 +237,15 @@ def master(action_index):
 	##### IN THE ALTERNATE GRAPH, WE UPDATE FROM_STATE_BELIEF AS TARGET_BELIEF
 
 	from_state_belief = target_belief
-	fuse_observations()
+	# fuse_observations()
 	# back_prop(action_index)
 
 	print "current_pose:",current_pose
 	print "Transition Matrix: ",action_index,"\n"
-	print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
+	print trans_mat_unknown[action_index,:,:]
+	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
+
+	display_beliefs()
 
 state_counter = 0
 action = 'w'
@@ -303,12 +309,6 @@ while (action!='q'):
 
 		# path_plot[current_pose[0]][current_pose[1]]=1				
 		master(action_index)
-	
-
-
-
-
-
 
 
 
