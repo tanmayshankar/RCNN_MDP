@@ -113,8 +113,6 @@ def initialize_all():
 	initialize_unknown_observation()
 	initialize_unknown_transitions()
 
-
-
 def fuse_observations():
 	global from_state_belief
 	global current_pose
@@ -133,6 +131,20 @@ def fuse_observations():
 
 	# print "Dummy.",dummy
 	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
+
+def bayes_obs_fusion():
+	global to_state_belief
+	global current_pose
+	global observation_model
+	global obs_space
+	
+	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+
+	for i in range(0,obs_space):
+		for j in range(0,obs_space):
+			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
+	
+	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
 
 def calculate_target(action_index):
 	# global trans_mat_unknown
@@ -158,6 +170,45 @@ def calculate_target(action_index):
 
 	# if (target_belief.sum()<1.):
 	# 	target_belief /= target_belief.sum()
+
+def simulated_model(action_index):
+	global trans_mat
+	global from_state_belief
+
+	#### BASED ON THE TRANSITION MODEL CORRESPONDING TO ACTION_INDEX, PROBABILISTICALLY FIND THE NEXT SINGLE STATE.
+	#must find the right bucket
+
+	rand_num = random.random()
+	bucket_space = npy.zeros(transition_space**2)
+	cummulative = 0.
+	bucket_index =0
+
+	for i in range(0,transition_space):
+		for j in range(0,transition_space):
+			cummulative += trans_mat[action_index,i,j]
+			bucket_space[3*i+j] = cummulative
+
+	if (rand_num<bucket_space[0]):
+		bucket_index=0
+	elif (rand_num>bucket_space[8]):
+		bucket_index=8
+	else:
+		for i in range(1,transition_space**2):
+			if (bucket_space[i-1]<rand_num)and(rand_num<bucket_space[i]):
+				bucket_index=i
+
+	if (bucket_index<(transition_space/2)):
+		target_belief[:,:]=0.
+		current_pose[0] += action_space[bucket_index][0]
+		current_pose[1] += action_space[bucket_index][1]
+		target_belief[current_pose[0],current_pose[1]]=1.
+
+	elif (bucket_index>(transition_space/2)):
+		target_belief[:,:]=0.
+		current_pose[0] += action_space[bucket_index-1][0]
+		current_pose[1] += action_space[bucket_index-1][1]
+		target_belief[current_pose[0],current_pose[1]]=1.
+
 
 def belief_prop(action_index):
 	global trans_mat_unknown
@@ -220,9 +271,13 @@ def master(action_index):
 	global target_belief
 	global current_pose
 
-	fuse_observations()
+	# fuse_observations()
 	belief_prop(action_index)
-	calculate_target(action_index)
+	bayes_obs_fusion()
+	# calculate_target(action_index)
+
+
+
 	back_prop(action_index)
 	
 	# from_state_belief = to_state_belief
