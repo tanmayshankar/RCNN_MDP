@@ -17,18 +17,15 @@ discrete_size = 50
 #Action size also determines number of convolutional filters. 
 action_size = 8
 action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
-############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
+## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
-
 time_limit = 100
 
-npy.set_printoptions(precision=3)
+# npy.set_printoptions(precision=3)
 
-value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
-
 optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
 
 gamma = 0.95
@@ -36,13 +33,13 @@ gamma = 0.95
 
 trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
 
-def conv_transition_filters():
+def initialize_transitions():
 	global trans_mat
-	trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
-	trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+	# trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
+	# trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
 
-	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
-	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
+	trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
+	trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
 	
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)
@@ -57,8 +54,6 @@ def conv_transition_filters():
 	# for i in range(0,action_size):
 	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
 	# 	trans_mat[i] = npy.flipud(trans_mat[i])
-
-conv_transition_filters()
 
 print "Transition Matrices:\n",trans_mat
 
@@ -83,18 +78,26 @@ def initialize_unknown_transitions():
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
 
-initialize_unknown_transitions()
-
 obs_space = 3
 observation_model = npy.zeros(shape=(obs_space,obs_space))
+obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
+
+def initialize_unknown_observation():
+	global obs_model_unknown
+	obs_model_unknown = obs_model_unknown/obs_model_unknown.sum()
 
 def initialize_observation():
-	# print "bleh"
 	global observation_model
 	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
 	print observation_model
 
-initialize_observation()
+def initialize_all():
+	initialize_observation()
+	initialize_transitions()
+	initialize_unknown_observation()
+	initialize_unknown_transitions()
+
+initialize_all()
 
 def fuse_observations():
 	global from_state_belief
@@ -286,6 +289,15 @@ while (action!='q'):
 
 
 
+
+
+
+
+
+
+
+######TO RUN FEEDFORWARD PASSES OF THE RECURRENT CONV NET.#########
+
 def conv_layer():	
 	global value_function
 	global trans_mat
@@ -317,6 +329,13 @@ def recurrent_value_iteration():
 		print t
 	
 # recurrent_value_iteration()
+
+
+
+
+
+
+######TO SAVE THE POLICY AND VALUE FUNCTION:######
 
 # print "Here's the policy."
 # for i in range(0,discrete_size):
