@@ -25,11 +25,20 @@ action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
 
+# basis_functions = npy.loadtxt(str(sys.argv[1]))
+# reward_weights = npy.loadtxt(str(sys.argv[2]))
+# basis_functions = basis_functions.reshape((basis_size,discrete_size,discrete_size))
+
+# reward_function = basis_functions[0]*reward_weights[0]+basis_functions[2]*reward_weights[2]+basis_functions[1]*reward_weights[1]
 #Static / instantaneous reward. 
 reward_function = npy.loadtxt(str(sys.argv[1]))
-reward_function /=1000.0
-
+# reward_function = basis_functions[0,:,:]
+# reward_function /=1000.0
+# 
 time_limit = 100
+
+
+
 
 value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
@@ -121,6 +130,9 @@ for i in range(0,discrete_size):
 # print "These are the value functions."
 # for t in range(0,time_limit):
 # 	print value_functions[t]
+with file('reward_function.txt','w') as outfile: 
+	outfile.write('#Reward Function.\n')
+	npy.savetxt(outfile,1000*reward_function,fmt='%-7.2f')
 
 with file('output_policy.txt','w') as outfile: 
 	outfile.write('#Policy.\n')
@@ -128,5 +140,5 @@ with file('output_policy.txt','w') as outfile:
 
 with file('value_function.txt','w') as outfile: 
 	outfile.write('#Value Function.\n')
-	npy.savetxt(outfile,value_function,fmt='%-7.2f')
+	npy.savetxt(outfile,1000*value_function,fmt='%-7.2f')
 
