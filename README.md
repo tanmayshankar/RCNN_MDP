@@ -1,5 +1,6 @@
 # RCNN_MDP
-Code base for solving Value Iteration in a Markov Decision Process using Recurrent Convolutional Neural Networks. 
+
+This repository is for exploring the connection between Markov Decision Processes and Recurrent Convolutional Neural Networks. 
 
 This code base targets 3 problems: 
 
@@ -10,17 +11,14 @@ This code base targets 3 problems:
 Currently problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. 
 
 Example: 
-
 ./scripts/feedforward_rcnn/rcnn_mdp_value_iteration.py data/trial_3/reward_function.txt
 
 Example: 
-
 ./scripts/feedforward_rcnn/variable_transition_size.py data/trial_3/reward_function.txt
 
 Once either of the feedforward passes are run, you may display the policy, reward and value functions by running:
 
 Example: 
-
 ./scripts/display/display_policy.py output_policy.txt reward_function.txt value_function.txt
 
 
