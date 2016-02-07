@@ -10,11 +10,9 @@ This code base targets 3 problems:
 
 Currently problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. 
 
-Example: 
-./scripts/feedforward_rcnn/rcnn_mdp_value_iteration.py data/trial_3/reward_function.txt
-
-Example: 
-./scripts/feedforward_rcnn/variable_transition_size.py data/trial_3/reward_function.txt
+Here's an example: 
+1. ./scripts/feedforward_rcnn/rcnn_mdp_value_iteration.py data/trial_3/reward_function.txt
+- ./scripts/feedforward_rcnn/variable_transition_size.py data/trial_3/reward_function.txt
 
 Once either of the feedforward passes are run, you may display the policy, reward and value functions by running:
 
