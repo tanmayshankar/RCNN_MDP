@@ -12,7 +12,6 @@ from scipy import signal
 import copy
 
 
-
 ###### DEFINITIONS
 
 basis_size = 3
@@ -232,25 +231,25 @@ def back_prop(action_index):
 	alpha = 0.1
 
 	w = transition_space/2
-	print "W:",w
-	# for ai in range(-transition_space/2,transition_space/2+1):
-		# for aj in range(-transition_space/2,transition_space/2+1):
+	# print "W:",w
+	# # for ai in range(-transition_space/2,transition_space/2+1):
+	# 	# for aj in range(-transition_space/2,transition_space/2+1):
 
-	print "From:"
-	# for i in range(20,30):
-		# print from_state_belief[50-i,20:30]
-	for i in range(1,50):
-		print from_state_belief[50-i,:]
-	print "To:"
-	# for i in range(20,30):
-		# print to_state_belief[50-i,20:30]
-	for i in range(1,50):
-		print to_state_belief[50-i,:]
-	print "Target:",
-	# for i in range(20,30):
-		# print target_belief[50-i,20:30]
-	for i in range(1,50):	
-		print target_belief[50-i,:]
+	# print "From:"
+	# # for i in range(20,30):
+	# 	# print from_state_belief[50-i,20:30]
+	# for i in range(1,50):
+	# 	print from_state_belief[50-i,:]
+	# print "To:"
+	# # for i in range(20,30):
+	# 	# print to_state_belief[50-i,20:30]
+	# for i in range(1,50):
+	# 	print to_state_belief[50-i,:]
+	# print "Target:",
+	# # for i in range(20,30):
+	# 	# print target_belief[50-i,20:30]
+	# for i in range(1,50):	
+	# 	print target_belief[50-i,:]
 
 
 	for ai in range(-w,w+1):
@@ -284,12 +283,24 @@ def master(action_index):
 	back_prop(action_index)
 	recurrence()	
 	
-	print "current_pose:",current_pose
-	print "Transition Matrix: ",action_index,"\n"
-	print trans_mat_unknown[action_index,:,:]
+	# print "current_pose:",current_pose
+	# print "Transition Matrix: ",action_index,"\n"
+	# print trans_mat_unknown[action_index,:,:]
+
+
+
 	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
 initialize_all()
+
+# def select_action():
+	
+# 	act_ind = rand.randrange(0,8)
+# 	dum_x = current_pose[0] + action_space[act_ind][0]
+# 	dum_y = current_pose[1] + action_space[act_ind][1]
+
+# 	if ((dum_x>=50)or(dum_x<0)):
+
 
 def input_actions():
 	global action
@@ -297,68 +308,91 @@ def input_actions():
 	global action_index
 	global current_pose
 
-	while (action!='q'):		
-	############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
-			# 
-			action = raw_input("Hit a key now: ")
-			if action=='w':			
-				state_counter+=1	
-				# current_demo.append([current_pose[0]+1,current_pose[1]])
-				current_pose[0]+=1			
-				action_index=0
+	# while (action!='q'):		
+	iterate=0
+	# while (iterate<=5000):		
+	# ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
+	# 		# 
+	# 		iterate+=1
+	# 		# action = raw_input("Hit a key now: ")
+	# 		# action = 
+	# 		if action=='w':			
+	# 			state_counter+=1	
+	# 			# current_demo.append([current_pose[0]+1,current_pose[1]])
+	# 			current_pose[0]+=1			
+	# 			action_index=0
 
-			if action=='a':			
-				state_counter+=1		
-				# current_demo.append([current_pose[0],current_pose[1]-1])
-				current_pose[1]-=1			
-				action_index=2
+	# 		if action=='a':			
+	# 			state_counter+=1		
+	# 			# current_demo.append([current_pose[0],current_pose[1]-1])
+	# 			current_pose[1]-=1			
+	# 			action_index=2
 
-			if action=='d':			
-				state_counter+=1
-				# current_demo.append([current_pose[0],current_pose[1]+1])
-				current_pose[1]+=1
-				action_index=1
+	# 		if action=='d':			
+	# 			state_counter+=1
+	# 			# current_demo.append([current_pose[0],current_pose[1]+1])
+	# 			current_pose[1]+=1
+	# 			action_index=1
 
-			if action=='s':			
-				state_counter+=1
-				# current_demo.append([current_pose[0]-1,current_pose[1]])
-				current_pose[0]-=1
-				action_index=3
+	# 		if action=='s':			
+	# 			state_counter+=1
+	# 			# current_demo.append([current_pose[0]-1,current_pose[1]])
+	# 			current_pose[0]-=1
+	# 			action_index=3
 
-			if ((action=='wa')or(action=='aw')):			
-				state_counter+=1	
-				# current_demo.append([current_pose[0]+1,current_pose[1]-1])
-				current_pose[0]+=1	
-				current_pose[1]-=1						
-				action_index=4
+	# 		if ((action=='wa')or(action=='aw')):			
+	# 			state_counter+=1	
+	# 			# current_demo.append([current_pose[0]+1,current_pose[1]-1])
+	# 			current_pose[0]+=1	
+	# 			current_pose[1]-=1						
+	# 			action_index=4
 
-			if ((action=='sa')or(action=='as')):					
-				state_counter+=1		
-				# current_demo.append([current_pose[0]-1,current_pose[1]-1])
-				current_pose[1]-=1
-				current_pose[0]-=1		
-				action_index=6
+	# 		if ((action=='sa')or(action=='as')):					
+	# 			state_counter+=1		
+	# 			# current_demo.append([current_pose[0]-1,current_pose[1]-1])
+	# 			current_pose[1]-=1
+	# 			current_pose[0]-=1		
+	# 			action_index=6
 
-			if ((action=='sd')or(action=='ds')):					
-				state_counter+=1
-				# current_demo.append([current_pose[0]-1,current_pose[1]+1])
-				current_pose[1]+=1
-				current_pose[0]-=1
-				action_index=7
+	# 		if ((action=='sd')or(action=='ds')):					
+	# 			state_counter+=1
+	# 			# current_demo.append([current_pose[0]-1,current_pose[1]+1])
+	# 			current_pose[1]+=1
+	# 			current_pose[0]-=1
+	# 			action_index=7
 
-			if ((action=='wd')or(action=='dw')):					
-				state_counter+=1
-				# current_demo.append([current_pose[0]+1,current_pose[1]+1])
-				current_pose[0]+=1			
-				current_pose[1]+=1			
-				action_index=5
+	# 		if ((action=='wd')or(action=='dw')):					
+	# 			state_counter+=1
+	# 			# current_demo.append([current_pose[0]+1,current_pose[1]+1])
+	# 			current_pose[0]+=1			
+	# 			current_pose[1]+=1			
+	# 			action_index=5
 
-			# path_plot[current_pose[0]][current_pose[1]]=1				
-			master(action_index)
+	# 		# path_plot[current_pose[0]][current_pose[1]]=1				
+	# 		master(action_index)
+
+	while (iterate<=500):		
+		iterate+=1
+		# select_action()
+		print iterate
+
+		# action_index = random.randrange(0,8)
+		action_index=iterate%8
+		dum_x = current_pose[0] + action_space[action_index][0]
+		dum_y = current_pose[1] + action_space[action_index][1]
+
+		# if ((dum_x<50)and(dum_x>=0)and(dum_y<50)and(dum_y>=0)):
+		if ((dum_x<49)and(dum_x>=1)and(dum_y<49)and(dum_y>=1)):
+			current_pose[0]=dum_x
+			current_pose[1]=dum_y
+
+
+
+		master(action_index)
 
 input_actions()
 
-
+print trans_mat_unknown
 
 
 
