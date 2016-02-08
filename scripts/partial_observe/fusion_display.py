@@ -58,17 +58,17 @@ action = 'w'
 def initialize_state():
 	global current_pose, from_state_belief
 
-	from_state_belief[24,24]=0.2
-	from_state_belief[25,24]=0.8
+	from_state_belief[24,24]=1.
+	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
 
 def initialize_transitions():
 	global trans_mat
-	# trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
-	# trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+	trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
+	trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
 
-	trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
-	trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
+	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
+	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
 	
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)
@@ -80,9 +80,9 @@ def initialize_transitions():
 	trans_mat[7] = npy.rot90(trans_mat_2,2)
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
-	# for i in range(0,action_size):
-	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
-	# 	trans_mat[i] = npy.flipud(trans_mat[i])
+	for i in range(0,action_size):
+		trans_mat[i] = npy.fliplr(trans_mat[i])
+		trans_mat[i] = npy.flipud(trans_mat[i])
 
 	print "Transition Matrices:\n",trans_mat
 
@@ -198,17 +198,19 @@ def simulated_model(action_index):
 				bucket_index=i
 
 	if (bucket_index<(transition_space/2)):
-		target_belief[:,:]=0.
+		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index][0]
 		current_pose[1] += action_space[bucket_index][1]
-		target_belief[current_pose[0],current_pose[1]]=1.
+		# target_belief[current_pose[0],current_pose[1]]=1.
 
 	elif (bucket_index>(transition_space/2)):
-		target_belief[:,:]=0.
+		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index-1][0]
 		current_pose[1] += action_space[bucket_index-1][1]
-		target_belief[current_pose[0],current_pose[1]]=1.
-
+		# target_belief[current_pose[0],current_pose[1]]=1.
+	
+	target_belief[:,:] = 0. 
+	target_belief[current_pose[0],current_pose[1]]=1.
 
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
@@ -235,20 +237,20 @@ def back_prop(action_index):
 		# for aj in range(-transition_space/2,transition_space/2+1):
 
 	print "From:"
-	for i in range(20,30):
-		print from_state_belief[50-i,20:30]
-	# for i in range(0,50):
-	# 	print from_state_belief[i,0:50]
+	# for i in range(20,30):
+		# print from_state_belief[50-i,20:30]
+	for i in range(1,50):
+		print from_state_belief[50-i,:]
 	print "To:"
-	for i in range(20,30):
-		print to_state_belief[50-i,20:30]
-	# for i in range(0,50):
-	# 	print to_state_belief[i,0:50]
+	# for i in range(20,30):
+		# print to_state_belief[50-i,20:30]
+	for i in range(1,50):
+		print to_state_belief[50-i,:]
 	print "Target:",
-	for i in range(20,30):
-		print target_belief[50-i,20:30]
-	# for i in range(0,50):	
-	# 	print target_belief[i,0:50]
+	# for i in range(20,30):
+		# print target_belief[50-i,20:30]
+	for i in range(1,50):	
+		print target_belief[50-i,:]
 
 
 	for ai in range(-w,w+1):
