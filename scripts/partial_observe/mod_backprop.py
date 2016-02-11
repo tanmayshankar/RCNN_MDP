@@ -53,6 +53,7 @@ obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
 
 state_counter = 0
 action = 'w'
+norm_factor=0.
 
 
 def initialize_state():
@@ -130,10 +131,7 @@ def fuse_observations():
 	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
 
 def bayes_obs_fusion():
-	global to_state_belief
-	global current_pose
-	global observation_model
-	global obs_space
+	global to_state_belief, current_pose, observation_model, obs_space, norm_factor
 	
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
 
@@ -141,7 +139,20 @@ def bayes_obs_fusion():
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 	
+	norm_factor = dummy.sum()
+
 	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
+
+def bayes_fusion_target():
+	global target_belief, current_pose, observation_model, obs_space
+	
+	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+
+	for i in range(0,obs_space):
+		for j in range(0,obs_space):
+			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = target_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
+	
+	target_belief[:,:] = dummy[:,:]/dummy.sum()
 
 def calculate_target(action_index):
 	global target_belief
@@ -247,7 +258,7 @@ def back_prop(action_index):
 
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
-			loss[w+ai,w+aj]-=lamda*(trans_mat_unknown[action_index,:,:].sum()-1)**2
+			loss[w+ai,w+aj]+=lamda*(trans_mat_unknown[action_index,:,:].sum()-1)**2
 			for i in range(0,discrete_size-2):
 				for j in range(0,discrete_size-2):
 
@@ -263,33 +274,50 @@ def back_prop(action_index):
 
 def trans_back_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
+	global transition_space,obs_space, norm_factor
 
-	loss = npy.zeros(shape=(transition_space,transition_space))
+	trans_loss_grad = npy.zeros(shape=(transition_space,transition_space))
 	alpha = 0.1
+	
 	w = transition_space/2		
+	h = obs_space/2
 	#Defining weightage for the sum of transition.
 	lamda = 1.
 
 	display_beliefs()
+	difference_term = 0.
+	obs_mask_term =0.
+	# obs_mask_term = npy.zeros(shape=(obs_space,obs_space))
+	sum_term = 0.
+
+	for i in range(0,discrete_size-2):
+		for j in range(0,discrete_size-2):
+			difference_term -= (target_belief[i,j]-to_state_belief[i,j])
+
+	difference_term *= norm_factor*2
+
+	sum_term = lamda*((trans_mat_unknown[action_index,:,:].sum()-1)**2)
 
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
-			loss[w+ai,w+aj]-=lamda*(trans_mat_unknown[action_index,:,:].sum()-1)**2
-			for i in range(0,discrete_size-2):
-				for j in range(0,discrete_size-2):
+			
+			# loss[w+ai,w+aj]+=lamda*(trans_mat_unknown[action_index,:,:].sum()-1)**2
+			# term = 2*(target_belief[i,j]-to_state_belief[i,j])*norm_factor
 
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) 
+			for k in range(-h,h+1):
+				for l in range(-h,h+1):
+					# obs_mask_term[k+h,l+h] += observation_model[h+k,h+l] * from_state_belief[current_pose[0]+k+w-ai,current_pose[1]+l+w-aj]
+					obs_mask_term += observation_model[h+k,h+l] * from_state_belief[current_pose[0]+k+w-ai,current_pose[1]+l+w-aj]
+							# trans_loss_grad[w+ai,w+aj] -= 
 
-			trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
-
+			trans_loss_grad[w+ai,w+aj] = difference_term*obs_mask_term + sum_term*trans_mat_unknown[action_index,w+ai,w+aj] 
+			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * trans_loss_grad[w+ai,w+aj]
 
 			# trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
 			# if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
 			# 	trans_mat_unknown[action_index,w+ai,w+aj]=0
-			# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
-
-
+	# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
 def recurrence():
 	global from_state_belief,target_belief
@@ -307,7 +335,8 @@ def master(action_index):
 	belief_prop(action_index)
 	bayes_obs_fusion()
 	simulated_model(action_index)
-	back_prop(action_index)
+	bayes_fusion_target()
+	trans_back_prop(action_index)
 	recurrence()	
 	
 	print "current_pose:",current_pose
