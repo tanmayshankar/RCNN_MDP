@@ -101,8 +101,7 @@ def initialize_unknown_observation():
 
 def initialize_observation():
 	global observation_model
-	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
-	# observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
+	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
 	print observation_model
 
 def initialize_all():
@@ -231,6 +230,8 @@ def back_prop(action_index):
 	loss = npy.zeros(shape=(transition_space,transition_space))
 	alpha = 0.1
 
+	lamda = 1.
+
 	w = transition_space/2
 	# print "W:",w
 	# # for ai in range(-transition_space/2,transition_space/2+1):
@@ -252,18 +253,26 @@ def back_prop(action_index):
 	# for i in range(1,50):	
 	# 	print target_belief[50-i,:]
 
-
+	delta = 0.
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
+			
+			# loss[w+ai,w+aj] += lamda * (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
+			
 			for i in range(0,discrete_size-2):
 				for j in range(0,discrete_size-2):
 
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
+					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
+					# delta = (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
+					
+					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
+					loss[w+ai,w+aj] -= from_state_belief[w+i-ai,w+j-aj]
+					
 
-			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
 			# trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
-			if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
-				trans_mat_unknown[action_index,w+ai,w+aj]=0
+			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
+			# if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
+			# 	trans_mat_unknown[action_index,w+ai,w+aj]=0
 			# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
@@ -374,7 +383,7 @@ def input_actions():
 	# 		# path_plot[current_pose[0]][current_pose[1]]=1				
 	# 		master(action_index)
 
-	while (iterate<=100):		
+	while (iterate<=350):		
 		iterate+=1
 		# select_action()
 		# print iterate
@@ -397,6 +406,14 @@ def input_actions():
 input_actions()
 
 print trans_mat_unknown
+
+
+
+
+
+
+
+
 
 
 

@@ -11,7 +11,7 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
-
+print "Started."
 ###### DEFINITIONS
 
 basis_size = 3
@@ -23,7 +23,7 @@ action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 ## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
 #Transition space size determines size of convolutional filters. 
-transition_space = 3
+transition_space = 5
 time_limit = 100
 
 # npy.set_printoptions(precision=3)
@@ -64,9 +64,11 @@ def initialize_state():
 
 def initialize_transitions():
 	global trans_mat
-	trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
-	trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+	# trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
+	# trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
 
+	trans_mat_1 = [[0.,0.,0.1,0.,0.],[0.,0.05,0.6,0.05,0.],[0.,0.05,0.1,0.05,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
+	trans_mat_2 = [[0.1,0.05,0.,0.,0.],[0.05,0.6,0.05,0.,0.],[0.,0.05,0.1,0.,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
 	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
 	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
 	
@@ -121,7 +123,7 @@ def fuse_observations():
 	# for i in range(-l,l+1):
 	# 	for j in range(-l,l+1):
 	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
-
+	h = obs_space/2
 	for i in range(0,obs_space):
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
@@ -133,10 +135,14 @@ def bayes_obs_fusion():
 	global to_state_belief, current_pose, observation_model, obs_space, norm_factor
 	
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
+	h = obs_space/2
 	for i in range(0,obs_space):
 		for j in range(0,obs_space):
-			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
+			dummy[current_pose[0]-h+i,current_pose[1]-h+j] = to_state_belief[current_pose[0]-h+i,current_pose[1]-h+j]*observation_model[i,j]
+
+	# for i in range(-l,l+1):
+	# 	for j in range(-l,l+1):
+	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
 
 	norm_factor = dummy.sum()				
 	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
@@ -145,10 +151,10 @@ def bayes_fusion_target():
 	global target_belief, current_pose, observation_model, obs_space
 	
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
+	h = obs_space/2
 	for i in range(0,obs_space):
 		for j in range(0,obs_space):
-			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = target_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
+			dummy[current_pose[0]-h+i,current_pose[1]-h+j] = target_belief[current_pose[0]-h+i,current_pose[1]-h+j]*observation_model[i,j]
 	
 	target_belief[:,:] = dummy[:,:]/dummy.sum()
 
@@ -188,7 +194,7 @@ def simulated_model(action_index):
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
 			cummulative += trans_mat[action_index,i,j]
-			bucket_space[3*i+j] = cummulative
+			bucket_space[transition_space*i+j] = cummulative
 
 	if (rand_num<bucket_space[0]):
 		bucket_index=0
@@ -226,21 +232,23 @@ def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief
 
 	print "From:"
-	# for i in range(20,30):
-		# print from_state_belief[50-i,20:30]
-	for i in range(1,50):
-		print from_state_belief[50-i,:]
+	for i in range(20,30):
+		print from_state_belief[50-i,20:30]
+	# for i in range(1,50):
+	# 	print from_state_belief[50-i,:]
 	print "To:"
-	# for i in range(20,30):
-		# print to_state_belief[50-i,20:30]
-	for i in range(1,50):
-		print to_state_belief[50-i,:]
+	for i in range(20,30):
+		print to_state_belief[50-i,20:30]
+	# for i in range(1,50):
+	# 	print to_state_belief[50-i,:]
 	print "Target:",
-	# for i in range(20,30):
-		# print target_belief[50-i,20:30]
-	for i in range(1,50):	
-		print target_belief[50-i,:]
+	for i in range(20,30):
+		print target_belief[50-i,20:30]
+	# for i in range(1,50):	
+	# 	print target_belief[50-i,:]
 
+def display_transitions(action_index):
+	print "Transition:",action_index,"Matrix:\n",trans_mat_unknown[action_index,:,:]
 
 def back_prop(action_index):
 	# global trans_mat_unknown
@@ -254,9 +262,7 @@ def back_prop(action_index):
 	alpha = 0.01
 
 	lamda = 1.
-
 	w = transition_space/2
-
 	display_beliefs()
 
 	delta = 0.
@@ -282,7 +288,7 @@ def back_prop(action_index):
 
 def trans_back_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
-	global transition_space,obs_space, norm_factor
+	global transition_space,obs_space, norm_factor, current_pose
 
 	trans_loss_grad = npy.zeros(shape=(transition_space,transition_space))
 	alpha = 0.1
@@ -293,17 +299,18 @@ def trans_back_prop(action_index):
 	lamda = 1.
 
 	# display_beliefs()
-	
+	display_transitions(action_index)
+
 	difference_term = 0.
 	obs_mask_term =0.
 	# obs_mask_term = npy.zeros(shape=(obs_space,obs_space))
 	sum_term = 0.
 
-	for i in range(0,discrete_size-2):
-		for j in range(0,discrete_size-2):
+	for i in range(0,discrete_size):
+		for j in range(0,discrete_size):
 			difference_term -= (target_belief[i,j]-to_state_belief[i,j])
 
-	difference_term *= norm_factor*2
+	difference_term *= 2/norm_factor
 
 	sum_term = lamda*((trans_mat_unknown[action_index,:,:].sum()-1)**2)
 
@@ -311,7 +318,9 @@ def trans_back_prop(action_index):
 		for aj in range(-w,w+1):
 			
 			# loss[w+ai,w+aj]+=lamda*(trans_mat_unknown[action_index,:,:].sum()-1)**2
-			# term = 2*(target_belief[i,j]-to_state_belief[i,j])*norm_factor
+			# for i in range(0,discrete_size):
+			# 	for j in range(0,discrete_size):
+			# 		term -= 2*(target_belief[i,j]-to_state_belief[i,j])*norm_factor
 
 			for k in range(-h,h+1):
 				for l in range(-h,h+1):
@@ -320,7 +329,7 @@ def trans_back_prop(action_index):
 							# trans_loss_grad[w+ai,w+aj] -= 
 
 			trans_loss_grad[w+ai,w+aj] = difference_term*obs_mask_term + sum_term*trans_mat_unknown[action_index,w+ai,w+aj] 
-			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * trans_loss_grad[w+ai,w+aj]
+			trans_mat_unknown[action_index,w+ai,w+aj] += alpha * trans_loss_grad[w+ai,w+aj]
 
 			# trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
 			# if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
@@ -425,13 +434,13 @@ def input_actions():
 
 		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		dum_x = current_pose[0] + action_space[action_index][0]
-		dum_y = current_pose[1] + action_space[action_index][1]
+		# dum_x = current_pose[0] + action_space[action_index][0]
+		# dum_y = current_pose[1] + action_space[action_index][1]
 
-		# if ((dum_x<50)and(dum_x>=0)and(dum_y<50)and(dum_y>=0)):
-		if ((dum_x<49)and(dum_x>=1)and(dum_y<49)and(dum_y>=1)):
-			current_pose[0]=dum_x
-			current_pose[1]=dum_y
+		# ##### if ((dum_x<50)and(dum_x>=0)and(dum_y<50)and(dum_y>=0)):
+		# if ((dum_x<49)and(dum_x>=1)and(dum_y<49)and(dum_y>=1)):
+		# 	current_pose[0]=dum_x
+		# 	current_pose[1]=dum_y
 
 		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
 

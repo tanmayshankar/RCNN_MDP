@@ -388,13 +388,13 @@ def input_actions():
 
 		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		dum_x = current_pose[0] + action_space[action_index][0]
-		dum_y = current_pose[1] + action_space[action_index][1]
+		# dum_x = current_pose[0] + action_space[action_index][0]
+		# dum_y = current_pose[1] + action_space[action_index][1]
 
-		# if ((dum_x<50)and(dum_x>=0)and(dum_y<50)and(dum_y>=0)):
-		if ((dum_x<49)and(dum_x>=1)and(dum_y<49)and(dum_y>=1)):
-			current_pose[0]=dum_x
-			current_pose[1]=dum_y
+		# # if ((dum_x<50)and(dum_x>=0)and(dum_y<50)and(dum_y>=0)):
+		# if ((dum_x<49)and(dum_x>=1)and(dum_y<49)and(dum_y>=1)):
+		# 	current_pose[0]=dum_x
+		# 	current_pose[1]=dum_y
 
 		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
 
