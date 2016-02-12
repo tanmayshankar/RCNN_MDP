@@ -185,31 +185,40 @@ def simulated_model(action_index):
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
 			cummulative += trans_mat[action_index,i,j]
-			bucket_space[3*i+j] = cummulative
+			bucket_space[transition_space*i+j] = cummulative
 
 	if (rand_num<bucket_space[0]):
 		bucket_index=0
-	elif (rand_num>bucket_space[8]):
-		bucket_index=8
-	else:
-		for i in range(1,transition_space**2):
-			if (bucket_space[i-1]<rand_num)and(rand_num<bucket_space[i]):
-				bucket_index=i
+	# elif (rand_num>bucket_space[7]):
+		# bucket_index=8
+	# else:
+	for i in range(1,transition_space**2):
+		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
+			bucket_index=i
+			print "Bucket Index chosen: ",bucket_index
 
-	if (bucket_index<(transition_space/2)):
+	print "Ideal action: ",action_index," ",action_space[action_index]
+	if (bucket_index<((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index][0]
 		current_pose[1] += action_space[bucket_index][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
+		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index]
 
-	elif (bucket_index>(transition_space/2)):
+	elif (bucket_index>((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index-1][0]
 		current_pose[1] += action_space[bucket_index-1][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
+		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index-1]
+	
+	elif (bucket_index==((transition_space**2)/2)):
+		print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
 	
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
+	print "Random:",rand_num
+	print "BUCKET SPACE:",bucket_space
 
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
@@ -305,15 +314,6 @@ def master(action_index):
 
 initialize_all()
 
-# def select_action():
-	
-# 	act_ind = rand.randrange(0,8)
-# 	dum_x = current_pose[0] + action_space[act_ind][0]
-# 	dum_y = current_pose[1] + action_space[act_ind][1]
-
-# 	if ((dum_x>=50)or(dum_x<0)):
-
-
 def input_actions():
 	global action
 	global state_counter
@@ -322,66 +322,6 @@ def input_actions():
 
 	# while (action!='q'):		
 	iterate=0
-	# while (iterate<=5000):		
-	# ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
-	# 		# 
-	# 		iterate+=1
-	# 		# action = raw_input("Hit a key now: ")
-	# 		# action = 
-	# 		if action=='w':			
-	# 			state_counter+=1	
-	# 			# current_demo.append([current_pose[0]+1,current_pose[1]])
-	# 			current_pose[0]+=1			
-	# 			action_index=0
-
-	# 		if action=='a':			
-	# 			state_counter+=1		
-	# 			# current_demo.append([current_pose[0],current_pose[1]-1])
-	# 			current_pose[1]-=1			
-	# 			action_index=2
-
-	# 		if action=='d':			
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0],current_pose[1]+1])
-	# 			current_pose[1]+=1
-	# 			action_index=1
-
-	# 		if action=='s':			
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0]-1,current_pose[1]])
-	# 			current_pose[0]-=1
-	# 			action_index=3
-
-	# 		if ((action=='wa')or(action=='aw')):			
-	# 			state_counter+=1	
-	# 			# current_demo.append([current_pose[0]+1,current_pose[1]-1])
-	# 			current_pose[0]+=1	
-	# 			current_pose[1]-=1						
-	# 			action_index=4
-
-	# 		if ((action=='sa')or(action=='as')):					
-	# 			state_counter+=1		
-	# 			# current_demo.append([current_pose[0]-1,current_pose[1]-1])
-	# 			current_pose[1]-=1
-	# 			current_pose[0]-=1		
-	# 			action_index=6
-
-	# 		if ((action=='sd')or(action=='ds')):					
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0]-1,current_pose[1]+1])
-	# 			current_pose[1]+=1
-	# 			current_pose[0]-=1
-	# 			action_index=7
-
-	# 		if ((action=='wd')or(action=='dw')):					
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0]+1,current_pose[1]+1])
-	# 			current_pose[0]+=1			
-	# 			current_pose[1]+=1			
-	# 			action_index=5
-
-	# 		# path_plot[current_pose[0]][current_pose[1]]=1				
-	# 		master(action_index)
 
 	while (iterate<=350):		
 		iterate+=1

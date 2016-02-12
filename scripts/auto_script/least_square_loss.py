@@ -132,6 +132,37 @@ def fuse_observations():
 	# print "Dummy.",dummy
 	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
 
+def display_beliefs():
+	global from_state_belief,to_state_belief,target_belief,current_pose
+
+	# print "From:"
+	# for i in range(20,30):
+	# 	print from_state_belief[50-i,20:30]
+	# # for i in range(1,50):
+	# # 	print from_state_belief[50-i,:]
+	# print "To:"
+	# for i in range(20,30):
+	# 	print to_state_belief[50-i,20:30]
+	# # for i in range(1,50):
+	# # 	print to_state_belief[50-i,:]
+	# print "Target:",
+	# for i in range(20,30):
+	# 	print target_belief[50-i,20:30]
+	# # for i in range(1,50):	
+	# # 	print target_belief[50-i,:]
+
+	# print "From:"
+	# for i in range(current_pose[0]-5,current_pose[0]+5):
+	# 	print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
+	print "To:"
+	for i in range(current_pose[0]-5,current_pose[0]+5):
+		print to_state_belief[i,current_pose[1]-5:current_pose[1]+5]
+	# print "Target:"
+	# for i in range(current_pose[0]-5,current_pose[0]+5):
+	# 	print target_belief[i,current_pose[1]-5:current_pose[1]+5]
+
+
+
 def bayes_obs_fusion():
 	global to_state_belief
 	global current_pose
@@ -170,7 +201,6 @@ def calculate_target(action_index):
 
 	# if (target_belief.sum()<1.):
 	# 	target_belief /= target_belief.sum()
-
 def simulated_model(action_index):
 	global trans_mat, from_state_belief
 
@@ -185,31 +215,40 @@ def simulated_model(action_index):
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
 			cummulative += trans_mat[action_index,i,j]
-			bucket_space[3*i+j] = cummulative
+			bucket_space[transition_space*i+j] = cummulative
 
 	if (rand_num<bucket_space[0]):
 		bucket_index=0
-	elif (rand_num>bucket_space[8]):
-		bucket_index=8
-	else:
-		for i in range(1,transition_space**2):
-			if (bucket_space[i-1]<rand_num)and(rand_num<bucket_space[i]):
-				bucket_index=i
+	# elif (rand_num>bucket_space[7]):
+		# bucket_index=8
+	# else:
+	for i in range(1,transition_space**2):
+		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
+			bucket_index=i
+			print "Bucket Index chosen: ",bucket_index
 
-	if (bucket_index<(transition_space/2)):
+	print "Ideal action: ",action_index," ",action_space[action_index]
+	if (bucket_index<((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index][0]
 		current_pose[1] += action_space[bucket_index][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
+		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index]
 
-	elif (bucket_index>(transition_space/2)):
+	elif (bucket_index>((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index-1][0]
 		current_pose[1] += action_space[bucket_index-1][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
+		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index-1]
+	
+	elif (bucket_index==((transition_space**2)/2)):
+		print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
 	
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
+	print "Random:",rand_num
+	print "BUCKET SPACE:",bucket_space
 
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
@@ -279,38 +318,23 @@ def recurrence():
 	from_state_belief = target_belief
 
 def master(action_index):
-	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	# global target_belief
-	# global current_pose
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
 	belief_prop(action_index)
-	bayes_obs_fusion()
+	# bayes_obs_fusion()
 	simulated_model(action_index)
 	back_prop(action_index)
 	recurrence()	
+	display_beliefs()
 	
 	# print "current_pose:",current_pose
-	# print "Transition Matrix: ",action_index,"\n"
-	# print trans_mat_unknown[action_index,:,:]
-
-
+	print "Transition Matrix: ",action_index,"\n"
+	print trans_mat_unknown[action_index,:,:]
 
 	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
 initialize_all()
-
-# def select_action():
-	
-# 	act_ind = rand.randrange(0,8)
-# 	dum_x = current_pose[0] + action_space[act_ind][0]
-# 	dum_y = current_pose[1] + action_space[act_ind][1]
-
-# 	if ((dum_x>=50)or(dum_x<0)):
-
 
 def input_actions():
 	global action

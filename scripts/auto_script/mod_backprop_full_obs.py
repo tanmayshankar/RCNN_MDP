@@ -198,27 +198,36 @@ def simulated_model(action_index):
 
 	if (rand_num<bucket_space[0]):
 		bucket_index=0
-	elif (rand_num>bucket_space[8]):
-		bucket_index=8
-	else:
-		for i in range(1,transition_space**2):
-			if (bucket_space[i-1]<rand_num)and(rand_num<bucket_space[i]):
-				bucket_index=i
+	# elif (rand_num>bucket_space[7]):
+		# bucket_index=8
+	# else:
+	for i in range(1,transition_space**2):
+		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
+			bucket_index=i
+			print "Bucket Index chosen: ",bucket_index
 
-	if (bucket_index<(transition_space/2)):
+	print "Ideal action: ",action_index," ",action_space[action_index]
+	if (bucket_index<((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index][0]
 		current_pose[1] += action_space[bucket_index][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
+		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index]
 
-	elif (bucket_index>(transition_space/2)):
+	elif (bucket_index>((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index-1][0]
 		current_pose[1] += action_space[bucket_index-1][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
+		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index-1]
+	
+	elif (bucket_index==((transition_space**2)/2)):
+		print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
 	
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
+	print "Random:",rand_num
+	print "BUCKET SPACE:",bucket_space
 
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
