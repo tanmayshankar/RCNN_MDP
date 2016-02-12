@@ -89,7 +89,7 @@ def initialize_transitions():
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
 	print "Transition Matrices:\n",trans_mat
-	
+
 	for i in range(0,action_size):
 		trans_mat[i] = npy.fliplr(trans_mat[i])
 		trans_mat[i] = npy.flipud(trans_mat[i])
@@ -162,15 +162,15 @@ def display_beliefs():
 	# # for i in range(1,50):	
 	# # 	print target_belief[50-i,:]
 
-	# print "From:"
-	# for i in range(current_pose[0]-5,current_pose[0]+5):
-	# 	print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
+	print "From:"
+	for i in range(current_pose[0]-5,current_pose[0]+5):
+		print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
 	print "To:"
 	for i in range(current_pose[0]-5,current_pose[0]+5):
 		print to_state_belief[i,current_pose[1]-5:current_pose[1]+5]
-	# print "Target:"
-	# for i in range(current_pose[0]-5,current_pose[0]+5):
-	# 	print target_belief[i,current_pose[1]-5:current_pose[1]+5]
+	print "Target:"
+	for i in range(current_pose[0]-5,current_pose[0]+5):
+		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
 
 
 
@@ -311,25 +311,6 @@ def back_prop(action_index):
 	lamda = 1.
 
 	w = transition_space/2
-	# print "W:",w
-	# # for ai in range(-transition_space/2,transition_space/2+1):
-	# 	# for aj in range(-transition_space/2,transition_space/2+1):
-
-	# print "From:"
-	# # for i in range(20,30):
-	# 	# print from_state_belief[50-i,20:30]
-	# for i in range(1,50):
-	# 	print from_state_belief[50-i,:]
-	# print "To:"
-	# # for i in range(20,30):
-	# 	# print to_state_belief[50-i,20:30]
-	# for i in range(1,50):
-	# 	print to_state_belief[50-i,:]
-	# print "Target:",
-	# # for i in range(20,30):
-	# 	# print target_belief[50-i,20:30]
-	# for i in range(1,50):	
-	# 	print target_belief[50-i,:]
 
 	delta = 0.
 	for ai in range(-w,w+1):
@@ -360,11 +341,27 @@ def master(action_index):
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
-	belief_prop(action_index)
+	# belief_prop(action_index)
+	# # bayes_obs_fusion()
+	# simulated_model(action_index)
+	# back_prop(action_index)
+	# recurrence()	
+
+
+	###Fiddling with the order: 
+
+	
 	# bayes_obs_fusion()
 	simulated_model(action_index)
-	back_prop(action_index)
 	recurrence()	
+	belief_prop(action_index)
+	
+	back_prop(action_index)
+	
+
+
+
+
 	display_beliefs()
 	
 	# print "current_pose:",current_pose
