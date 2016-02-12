@@ -63,11 +63,16 @@ def initialize_state():
 
 def initialize_transitions():
 	global trans_mat
-	# trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
+	trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
+	trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+	
+	#Adding epsilon so that the cummulative distribution has unique values. 
+	epsilon=0.0001
+	trans_mat_1+=epsilon
+	trans_mat_2+=epsilon
 
-	trans_mat_1 = [[0.01,0.86,0.01],[0.03,0.03,0.03],[0.01,0.01,0.01]]
-
-	trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+	trans_mat_1/=trans_mat_1.sum()
+	trans_mat_2/=trans_mat_2.sum()
 
 	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
 	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
@@ -223,30 +228,30 @@ def simulated_model(action_index):
 
 	if (rand_num<bucket_space[0]):
 		bucket_index=0
-	elif (rand_num>bucket_space[8]):
-		bucket_index=8
-	else:
-		for i in range(1,transition_space**2):
-			if (bucket_space[i-1]<rand_num)and(rand_num<bucket_space[i]):
-				bucket_index=i
-				print "Bucket Index chosen: ",bucket_index
+	# elif (rand_num>bucket_space[7]):
+		# bucket_index=8
+	# else:
+	for i in range(1,transition_space**2):
+		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
+			bucket_index=i
+			print "Bucket Index chosen: ",bucket_index
 
 	print "Ideal action: ",action_index," ",action_space[action_index]
-	if (bucket_index<(transition_space/2)):
+	if (bucket_index<((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index][0]
 		current_pose[1] += action_space[bucket_index][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
 		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index]
 
-	elif (bucket_index>(transition_space/2)):
+	elif (bucket_index>((transition_space**2)/2)):
 		# target_belief[:,:]=0.
 		current_pose[0] += action_space[bucket_index-1][0]
 		current_pose[1] += action_space[bucket_index-1][1]
 		# target_belief[current_pose[0],current_pose[1]]=1.
 		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index-1]
-
-	else:
+	
+	elif (bucket_index==((transition_space**2)/2)):
 		print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
 	
 	target_belief[:,:] = 0. 
@@ -415,7 +420,7 @@ def input_actions():
 		# print iterate
 
 		# action_index=iterate%8
-		action_index = 0
+		action_index = 1
 
 		# dum_x = current_pose[0] + action_space[action_index][0]
 		# dum_y = current_pose[1] + action_space[action_index][1]
