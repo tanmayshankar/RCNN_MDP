@@ -26,7 +26,7 @@ action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 transition_space = 3
 time_limit = 100
 
-# npy.set_printoptions(precision=3)
+npy.set_printoptions(precision=3)
 
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
 optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
@@ -61,10 +61,19 @@ def initialize_state():
 	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
 
+
 def initialize_transitions():
 	global trans_mat
-	trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
-	trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+	trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
+	trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+	
+	#Adding epsilon so that the cummulative distribution has unique values. 
+	epsilon=0.001
+	trans_mat_1+=epsilon
+	trans_mat_2+=epsilon
+
+	trans_mat_1/=trans_mat_1.sum()
+	trans_mat_2/=trans_mat_2.sum()
 
 	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
 	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
@@ -79,11 +88,13 @@ def initialize_transitions():
 	trans_mat[7] = npy.rot90(trans_mat_2,2)
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
+	print "Transition Matrices:\n",trans_mat
+
 	for i in range(0,action_size):
 		trans_mat[i] = npy.fliplr(trans_mat[i])
 		trans_mat[i] = npy.flipud(trans_mat[i])
 
-	print "Transition Matrices:\n",trans_mat
+	
 
 def initialize_unknown_transitions():
 	global trans_mat_unknown
@@ -132,6 +143,37 @@ def fuse_observations():
 	# print "Dummy.",dummy
 	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
 
+def display_beliefs():
+	global from_state_belief,to_state_belief,target_belief,current_pose
+
+	# print "From:"
+	# for i in range(20,30):
+	# 	print from_state_belief[50-i,20:30]
+	# # for i in range(1,50):
+	# # 	print from_state_belief[50-i,:]
+	# print "To:"
+	# for i in range(20,30):
+	# 	print to_state_belief[50-i,20:30]
+	# # for i in range(1,50):
+	# # 	print to_state_belief[50-i,:]
+	# print "Target:",
+	# for i in range(20,30):
+	# 	print target_belief[50-i,20:30]
+	# # for i in range(1,50):	
+	# # 	print target_belief[50-i,:]
+
+	print "From:"
+	for i in range(current_pose[0]-5,current_pose[0]+5):
+		print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
+	print "To:"
+	for i in range(current_pose[0]-5,current_pose[0]+5):
+		print to_state_belief[i,current_pose[1]-5:current_pose[1]+5]
+	print "Target:"
+	for i in range(current_pose[0]-5,current_pose[0]+5):
+		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
+
+
+
 def bayes_obs_fusion():
 	global to_state_belief
 	global current_pose
@@ -171,6 +213,28 @@ def calculate_target(action_index):
 	# if (target_belief.sum()<1.):
 	# 	target_belief /= target_belief.sum()
 
+def remap_indices(bucket_index):
+
+	#####action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
+	#####UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
+
+	if (bucket_index==0):
+		return 4
+	elif (bucket_index==1):
+		return 0
+	elif (bucket_index==2):
+		return 5
+	elif (bucket_index==3):
+		return 2	
+	elif (bucket_index==5):
+		return 3
+	elif (bucket_index==6):
+		return 6
+	elif (bucket_index==7):
+		return 1
+	elif (bucket_index==8):
+		return 7
+
 def simulated_model(action_index):
 	global trans_mat, from_state_belief
 
@@ -182,43 +246,48 @@ def simulated_model(action_index):
 	cummulative = 0.
 	bucket_index =0
 
+	orig_mat = npy.flipud(npy.fliplr(trans_mat[action_index,:,:]))
+
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
-			cummulative += trans_mat[action_index,i,j]
+			# Here, it must be the original, non -flipped transition matrix. 
+			# cummulative += trans_mat[action_index,transition_space-i,transition_space-j]
+			# cummulative += trans_mat[action_index,i,j]
+			cummulative += orig_mat[i,j]
 			bucket_space[transition_space*i+j] = cummulative
+
 
 	if (rand_num<bucket_space[0]):
 		bucket_index=0
 	# elif (rand_num>bucket_space[7]):
 		# bucket_index=8
 	# else:
+
+	print "BUCKET SPACE:",bucket_space
+	print "Random:",rand_num
+	
 	for i in range(1,transition_space**2):
 		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
 			bucket_index=i
 			print "Bucket Index chosen: ",bucket_index
 
-	print "Ideal action: ",action_index," ",action_space[action_index]
-	if (bucket_index<((transition_space**2)/2)):
-		# target_belief[:,:]=0.
-		current_pose[0] += action_space[bucket_index][0]
-		current_pose[1] += action_space[bucket_index][1]
-		# target_belief[current_pose[0],current_pose[1]]=1.
-		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index]
+	remap_index = remap_indices(bucket_index)
+	# print "Remap Index:",remap_index
+	print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
 
-	elif (bucket_index>((transition_space**2)/2)):
-		# target_belief[:,:]=0.
-		current_pose[0] += action_space[bucket_index-1][0]
-		current_pose[1] += action_space[bucket_index-1][1]
-		# target_belief[current_pose[0],current_pose[1]]=1.
-		print "Bucket index: ",bucket_index, "Action taken: ",action_space[bucket_index-1]
-	
-	elif (bucket_index==((transition_space**2)/2)):
-		print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
-	
+	if (bucket_index==((transition_space**2)/2)):
+		# print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
+		print "No action."		
+	else:
+		current_pose[0] += action_space[remap_index][0]
+		current_pose[1] += action_space[remap_index][1]
+		
+		print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
+		
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
-	print "Random:",rand_num
-	print "BUCKET SPACE:",bucket_space
+	
+	
 
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
@@ -242,40 +311,25 @@ def back_prop(action_index):
 	lamda = 1.
 
 	w = transition_space/2
-	# print "W:",w
-	# # for ai in range(-transition_space/2,transition_space/2+1):
-	# 	# for aj in range(-transition_space/2,transition_space/2+1):
-
-	# print "From:"
-	# # for i in range(20,30):
-	# 	# print from_state_belief[50-i,20:30]
-	# for i in range(1,50):
-	# 	print from_state_belief[50-i,:]
-	# print "To:"
-	# # for i in range(20,30):
-	# 	# print to_state_belief[50-i,20:30]
-	# for i in range(1,50):
-	# 	print to_state_belief[50-i,:]
-	# print "Target:",
-	# # for i in range(20,30):
-	# 	# print target_belief[50-i,20:30]
-	# for i in range(1,50):	
-	# 	print target_belief[50-i,:]
 
 	delta = 0.
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
 			
-			# loss[w+ai,w+aj] += lamda *(trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
+			loss[w+ai,w+aj] += lamda * (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
 			
 			for i in range(0,discrete_size-2):
 				for j in range(0,discrete_size-2):
 
 					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# delta = (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])  #*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					
+					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j]) 
 
+					#*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
+					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
+					
+					
+					
 			# trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
 			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
 			# if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
@@ -288,38 +342,37 @@ def recurrence():
 	from_state_belief = target_belief
 
 def master(action_index):
-	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	# global target_belief
-	# global current_pose
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
-	belief_prop(action_index)
-	bayes_obs_fusion()
-	simulated_model(action_index)
+	# belief_prop(action_index)
+	# # bayes_obs_fusion()
+	# simulated_model(action_index)
+	# back_prop(action_index)
+	# recurrence()	
+
+
+	###Fiddling with the order: 
+
+	
+	# bayes_obs_fusion()
+	display_beliefs()
+	simulated_model(action_index)	
+	belief_prop(action_index)	
 	back_prop(action_index)
 	recurrence()	
+
+
+
+
 	
 	# print "current_pose:",current_pose
-	# print "Transition Matrix: ",action_index,"\n"
-	# print trans_mat_unknown[action_index,:,:]
-
-
+	print "Transition Matrix: ",action_index,"\n"
+	print trans_mat_unknown[action_index,:,:]
 
 	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
 initialize_all()
-
-# def select_action():
-	
-# 	act_ind = rand.randrange(0,8)
-# 	dum_x = current_pose[0] + action_space[act_ind][0]
-# 	dum_y = current_pose[1] + action_space[act_ind][1]
-
-# 	if ((dum_x>=50)or(dum_x<0)):
-
 
 def input_actions():
 	global action
@@ -329,66 +382,6 @@ def input_actions():
 
 	# while (action!='q'):		
 	iterate=0
-	# while (iterate<=5000):		
-	# ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
-	# 		# 
-	# 		iterate+=1
-	# 		# action = raw_input("Hit a key now: ")
-	# 		# action = 
-	# 		if action=='w':			
-	# 			state_counter+=1	
-	# 			# current_demo.append([current_pose[0]+1,current_pose[1]])
-	# 			current_pose[0]+=1			
-	# 			action_index=0
-
-	# 		if action=='a':			
-	# 			state_counter+=1		
-	# 			# current_demo.append([current_pose[0],current_pose[1]-1])
-	# 			current_pose[1]-=1			
-	# 			action_index=2
-
-	# 		if action=='d':			
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0],current_pose[1]+1])
-	# 			current_pose[1]+=1
-	# 			action_index=1
-
-	# 		if action=='s':			
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0]-1,current_pose[1]])
-	# 			current_pose[0]-=1
-	# 			action_index=3
-
-	# 		if ((action=='wa')or(action=='aw')):			
-	# 			state_counter+=1	
-	# 			# current_demo.append([current_pose[0]+1,current_pose[1]-1])
-	# 			current_pose[0]+=1	
-	# 			current_pose[1]-=1						
-	# 			action_index=4
-
-	# 		if ((action=='sa')or(action=='as')):					
-	# 			state_counter+=1		
-	# 			# current_demo.append([current_pose[0]-1,current_pose[1]-1])
-	# 			current_pose[1]-=1
-	# 			current_pose[0]-=1		
-	# 			action_index=6
-
-	# 		if ((action=='sd')or(action=='ds')):					
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0]-1,current_pose[1]+1])
-	# 			current_pose[1]+=1
-	# 			current_pose[0]-=1
-	# 			action_index=7
-
-	# 		if ((action=='wd')or(action=='dw')):					
-	# 			state_counter+=1
-	# 			# current_demo.append([current_pose[0]+1,current_pose[1]+1])
-	# 			current_pose[0]+=1			
-	# 			current_pose[1]+=1			
-	# 			action_index=5
-
-	# 		# path_plot[current_pose[0]][current_pose[1]]=1				
-	# 		master(action_index)
 
 	while (iterate<=100):		
 		iterate+=1
