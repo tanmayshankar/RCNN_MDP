@@ -316,16 +316,20 @@ def back_prop(action_index):
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
 			
-			loss[w+ai,w+aj] -= lamda # (trans_mat_unknown[action_index,:,:].sum()-1.) #* trans_mat_unknown[action_index,w+ai,w+aj]
+			loss[w+ai,w+aj] += lamda * (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
 			
 			for i in range(0,discrete_size-2):
 				for j in range(0,discrete_size-2):
 
 					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# delta = (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					
+					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j]) 
 
+					#*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
+					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
+					
+					
+					
 			# trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
 			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
 			# if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
@@ -352,17 +356,15 @@ def master(action_index):
 
 	
 	# bayes_obs_fusion()
-	simulated_model(action_index)
-	recurrence()	
-	belief_prop(action_index)
-	
-	back_prop(action_index)
-	
-
-
-
-
 	display_beliefs()
+	simulated_model(action_index)	
+	belief_prop(action_index)	
+	back_prop(action_index)
+	recurrence()	
+
+
+
+
 	
 	# print "current_pose:",current_pose
 	print "Transition Matrix: ",action_index,"\n"
