@@ -8,7 +8,7 @@ This code base targets 3 problems:
 - Estimating the Transition and Observation models in a POMDP/PODRL setting from demonstrations or simulations. 
 - Estimating Reward functions in an Inverse Reinforcement Learning framework. 
 
-Currently problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. 
+Problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. 
 
 Here's an example: 
 
@@ -19,5 +19,10 @@ Once either of the feedforward passes are run, you may display the policy, rewar
 
 Example: 
 ./scripts/display/display_policy.py output_policy.txt reward_function.txt value_function.txt
+
+Currently, you may observe the outputs of learning the transition probabilities by running either of the following codes: 
+
+1. ./scripts/auto_script/difference_loss.py
+- ./scripts/auto_script/least_square_loss.py
 
 
