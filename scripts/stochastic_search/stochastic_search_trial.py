@@ -153,8 +153,9 @@ def update_population():
 
 	# max_vals = heapq.nlargest(pop_size, master_function_values) 
 	# max_args = heapq.nlargest(pop_size, range(len(function_values)), master_function_values.take)
-	max_args = heapq.nsmallest(pop_size, range(len(function_values)), master_function_values.take)
-
+	max_args = heapq.nsmallest(pop_size, range(len(function_values)), function_values.take)
+	# max_args = heapq.nsmallest(pop_size, function_values) #, master_function_values.take)
+	print "Functions selected:",max_args
 
 	for i in range(0,pop_size):
 		population[i,:]=master_population[max_args[i],:]
@@ -162,7 +163,7 @@ def update_population():
 npy.set_printoptions(precision=2)
 
 def master():
-	max_iter = 4000
+	max_iter = 100
 	initialize_pop()
 	print "Initial population:",population
 	eval_function_values()
@@ -177,7 +178,7 @@ def master():
 		calc_lc_children()
 		calc_rri_children()
 		eval_function_values()
-		print "Function values:", function_values[0:pop_size]	
+		print "Function values:", function_values #function_values[0:pop_size]	
 		update_population()
 
 master()
