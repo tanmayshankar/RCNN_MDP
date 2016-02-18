@@ -128,6 +128,7 @@ def objective_function(population_instace):
 	lamda = 3
 	# return (population_instace[0]-0.1)**2+(population_instace[1]-0.1)**2+(population_instace[2]-0.1)**2 ##+ lamda*(population_instace.sum())
 	return (population_instace[0]-4)**2+(population_instace[1]-3)**2+(population_instace[2]-2)**2 ##+ lamda*(population_instace.sum())
+	# return (population_instace[0]-4)**2+(population_instace[0]-8)**2+(population_instace[1]-3)**2+(population_instace[2]-2)**2 ##+ lamda*(population_instace.sum())
 
 def eval_function_values():
 	# sds
@@ -162,7 +163,7 @@ def update_population():
 
 npy.set_printoptions(precision=2)
 
-def master():
+def stochastic_search():
 	max_iter = 100
 	initialize_pop()
 	print "Initial population:",population
@@ -181,7 +182,7 @@ def master():
 		print "Function values:", function_values #function_values[0:pop_size]	
 		update_population()
 
-master()
+stochastic_search()
 
 print population
 
