@@ -41,9 +41,9 @@ reward_function = npy.loadtxt(str(sys.argv[1]))
 # reward_function = basis_functions[0,:,:]
 # reward_function /=1000.0
 # 
-time_limit = 100
+time_limit = 500
 
-reward_function -= npy.amax(reward_function)/5
+reward_function /= npy.amax(reward_function)
 
 value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
@@ -138,7 +138,7 @@ def recurrent_value_iteration():
 		t+=1
 		print t
 
-		if (t%10==0):
+		if (t%100==0):
 			optimal_policy=optimal_policy.astype(int)
 			for i in range(0,discrete_size):
 				for j in range(0,discrete_size):
@@ -151,6 +151,10 @@ def recurrent_value_iteration():
 			fig.colorbar(im)
 			ax.set(aspect=1, title='Quiver Plot')
 			plt.show()	
+
+		if (t==50):
+			reward_function = npy.loadtxt(str(sys.argv[2]))
+			reward_function /= npy.amax(reward_function)
 	
 recurrent_value_iteration()
 
