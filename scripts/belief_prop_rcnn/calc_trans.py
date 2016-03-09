@@ -24,8 +24,12 @@ action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
-# time_limit = 1000
-time_limit = 500
+time_limit = 1000
+
+bucket_space = npy.zeros((action_size,transition_space**2))
+cummulative = npy.zeros(action_size)
+bucket_index = 0
+# time_limit = 500
 
 npy.set_printoptions(precision=3)
 
@@ -68,8 +72,10 @@ def initialize_state():
 
 def initialize_transitions():
 	global trans_mat
-	trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
-	trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+	# trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
+	# trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+	trans_mat_1 = npy.array([[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]])
+	trans_mat_2 = npy.array([[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]])
 	
 	#Adding epsilon so that the cummulative distribution has unique values. 
 	epsilon=0.001
@@ -119,12 +125,6 @@ def initialize_observation():
 	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
 	print observation_model
 
-def initialize_all():
-	initialize_state()
-	initialize_observation()
-	initialize_transitions()
-	initialize_unknown_observation()
-	initialize_unknown_transitions()
 
 def fuse_observations():
 	# global from_state_belief
@@ -237,39 +237,42 @@ def remap_indices(bucket_index):
 	elif (bucket_index==8):
 		return 7
 
+def initialize_model_bucket():
+	global cummulative, bucket_index, bucket_space
+	orig_mat = copy.deepcopy(trans_mat)
+	for k in range(0,action_size):
+		orig_mat = npy.flipud(npy.fliplr(trans_mat[k,:,:]))
+
+		for i in range(0,transition_space):
+			for j in range(0,transition_space):
+				# Here, it must be the original, non -flipped transition matrix. 
+				# cummulative += trans_mat[action_index,transition_space-i,transition_space-j]
+				# cummulative += trans_mat[action_index,i,j]
+				cummulative[k] += orig_mat[i,j]
+				bucket_space[k,transition_space*i+j] = cummulative[k]
+
+
+def initialize_all():
+	initialize_state()
+	initialize_observation()
+	initialize_transitions()
+	initialize_unknown_observation()
+	initialize_unknown_transitions()
+	initialize_model_bucket()
+
 def simulated_model(action_index):
-	global trans_mat, from_state_belief
+	global trans_mat, from_state_belief, bucket_space, bucket_index, cummulative
 
 	#### BASED ON THE TRANSITION MODEL CORRESPONDING TO ACTION_INDEX, PROBABILISTICALLY FIND THE NEXT SINGLE STATE.
 	#must find the right bucket
 
 	rand_num = random.random()
-	bucket_space = npy.zeros(transition_space**2)
-	cummulative = 0.
-	bucket_index =0
 
-	orig_mat = npy.flipud(npy.fliplr(trans_mat[action_index,:,:]))
-
-	for i in range(0,transition_space):
-		for j in range(0,transition_space):
-			# Here, it must be the original, non -flipped transition matrix. 
-			# cummulative += trans_mat[action_index,transition_space-i,transition_space-j]
-			# cummulative += trans_mat[action_index,i,j]
-			cummulative += orig_mat[i,j]
-			bucket_space[transition_space*i+j] = cummulative
-
-
-	if (rand_num<bucket_space[0]):
+	if (rand_num<bucket_space[action_index,0]):
 		bucket_index=0
-	# elif (rand_num>bucket_space[7]):
-		# bucket_index=8
-	# else:
-
-	# print "BUCKET SPACE:",bucket_space
-	# print "Random:",rand_num
 	
 	for i in range(1,transition_space**2):
-		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
+		if (bucket_space[action_index,i-1]<=rand_num)and(rand_num<bucket_space[action_index,i]):
 			bucket_index=i
 			# print "Bucket Index chosen: ",bucket_index
 
@@ -351,6 +354,14 @@ def input_actions():
 		master(action_index, iterate)
 
 input_actions()
+
+
+def flip_trans_again():
+	for i in range(0,action_size):
+		trans_mat_unknown[i] = npy.fliplr(trans_mat_unknown[i])
+		trans_mat_unknown[i] = npy.flipud(trans_mat_unknown[i])
+
+flip_trans_again()
 
 print "Transition Matrix: "
 print trans_mat_unknown
@@ -435,13 +446,17 @@ def recurrent_value_iteration():
 # for t in range(0,time_limit):
 # 	print value_functions[t]
 
-# with file('actual_transition.txt','w') as outfile: 
-# 	outfile.write('#Transition Function.\n')
-# 	npy.savetxt(outfile,trans_mat,fmt='%-7.2f')
 
-# with file('estimated_transition.txt','w') as outfile: 
-# 	outfile.write('#Transition Function.\n')
-# 	npy.savetxt(outfile,trans_mat_unknown,fmt='%-7.2f')
+
+with file('actual_transition.txt','w') as outfile: 
+	for data_slice in trans_mat:
+		outfile.write('#Transition Function.\n')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+
+with file('estimated_transition.txt','w') as outfile: 
+	for data_slice in trans_mat_unknown:
+		outfile.write('#Transition Function.\n')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
 # with file('output_policy.txt','w') as outfile: 
 # 	outfile.write('#Policy.\n')
