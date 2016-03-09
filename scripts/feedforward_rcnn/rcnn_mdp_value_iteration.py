@@ -75,9 +75,9 @@ def conv_transition_filters():
 	# trans_mat[:] = npy.fliplr(trans_mat[:])
 	# trans_mat[:] = npy.flipud(trans_mat[:])
 	
-	# for i in range(0,action_size):
-	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
-	# 	trans_mat[i] = npy.flipud(trans_mat[i])
+	for i in range(0,action_size):
+		trans_mat[i] = npy.fliplr(trans_mat[i])
+		trans_mat[i] = npy.flipud(trans_mat[i])
 
 	# trans_mat[1] = trans_mat_1
 	# trans_mat[2] = npy.rot90(trans_mat_1)

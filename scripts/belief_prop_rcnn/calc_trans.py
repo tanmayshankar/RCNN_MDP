@@ -145,7 +145,7 @@ def fuse_observations():
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 
 	# print "Dummy.",dummy
-	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief,current_pose
@@ -188,7 +188,7 @@ def bayes_obs_fusion():
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 	
-	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calculate_target(action_index):
 	# global trans_mat_unknown
@@ -201,7 +201,7 @@ def calculate_target(action_index):
 	# target_belief[to_state[0],to_state[1]]=1.
 
 	#TARGET TYPE 2: actual_T * from_belief
-	target_belief = from_state_belief
+	# target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
 	
 	#TARGET TYPE 3: 
@@ -325,7 +325,7 @@ def back_prop(action_index,time_index):
 
 def recurrence():
 	global from_state_belief,target_belief
-	from_state_belief = target_belief
+	from_state_belief = copy.deepcopy(target_belief)
 
 def master(action_index, time_index):
 
@@ -357,6 +357,8 @@ print trans_mat_unknown
 trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
 print "Normalized:\n",trans_mat_unknown	
 
+
+print "Actual transition matrix:" , trans_mat
 
 
 
@@ -433,9 +435,13 @@ def recurrent_value_iteration():
 # for t in range(0,time_limit):
 # 	print value_functions[t]
 
-# with file('reward_function.txt','w') as outfile: 
-# 	outfile.write('#Reward Function.\n')
-# 	npy.savetxt(outfile,1000*reward_function,fmt='%-7.2f')
+# with file('actual_transition.txt','w') as outfile: 
+# 	outfile.write('#Transition Function.\n')
+# 	npy.savetxt(outfile,trans_mat,fmt='%-7.2f')
+
+# with file('estimated_transition.txt','w') as outfile: 
+# 	outfile.write('#Transition Function.\n')
+# 	npy.savetxt(outfile,trans_mat_unknown,fmt='%-7.2f')
 
 # with file('output_policy.txt','w') as outfile: 
 # 	outfile.write('#Policy.\n')
