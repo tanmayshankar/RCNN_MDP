@@ -132,7 +132,7 @@ def calculate_target(action_index):
 
 	# target_belief[:,:]=0.
 	# target_belief[to_state[0],to_state[1]]=1.
-	target_belief = from_state_belief
+	# target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
 	if (target_belief.sum()<1.):
 		target_belief /= target_belief.sum()
@@ -326,7 +326,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function += reward_function
 
 def recurrent_value_iteration():
 	global value_function

@@ -99,13 +99,15 @@ initialize_unknown_transitions()
 
 # def calculate_target(from_state,to_state,action_index):
 def calculate_target(to_state):
+
 	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
+	global to_state_belief
+	global from_state_belief
 	global target_belief
 
 	target_belief[:,:]=0.
 	target_belief[to_state[0],to_state[1]]=1.
+	
 
 def belief_prop(action_index):
 	global trans_mat_unknown
@@ -114,7 +116,7 @@ def belief_prop(action_index):
 	# global target_belief
 
 	to_state_belief = signal.convolve2d(from_state_belief,trans_mat_unknown[action_index],'same','fill',0)
-	from_state_belief = to_state_belief
+	from_state_belief = copy.deepcopy(to_state_belief)
 
 def back_prop(action_index):
 	global trans_mat_unknown
@@ -123,37 +125,46 @@ def back_prop(action_index):
 	global target_belief
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.01
+	alpha = 0.1
 
 	for ai in range(-1,transition_space/2+1):
 		for aj in range(-1,transition_space/2+1):
 
-			for i in range(1,discrete_size-1):
-				for j in range(1,discrete_size-1):
+			for i in range(0,discrete_size):
+				for j in range(0,discrete_size):
+					if ((ai+i)>49)or((ai+i)<0):
+						ai=0
+					if ((aj+j)>49)or((aj+j)<0):
+						aj=0					
 					loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
 			trans_mat_unknown[action_index,ai,aj] += alpha * loss[ai,aj]
+	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
-def master():
+def master(t):
 	global trans_mat_unknown
 	global to_state_belief
 	global from_state_belief
 	global target_belief
 
 	belief_prop(0)
-	calculate_target([23,24])
+	calculate_target([23+t,24])
 	# calculate_target
 
 	back_prop(0)
 	print "Transition Matrix.",trans_mat_unknown[0,:,:]
 
 dummy = 'y'
+t=0
 while (dummy=='y'):
-	print "From state belief.",from_state_belief
-	print "To state belief.",to_state_belief
-	master()
-
+	# for i in range(0,discrete_size):
+	# 	print "From state belief.",from_state_belief[i,:]
+	# for i in range(0,discrete_size):
+	# 	print "To state belief.",to_state_belief[i,:]
+	master(t)
+	t+=1
 	dummy=raw_input("Enter a key.")
+
 
 
 def conv_layer():	
@@ -174,7 +185,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function += reward_function
 
 def recurrent_value_iteration():
 	global value_function

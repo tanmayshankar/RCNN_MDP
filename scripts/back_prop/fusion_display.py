@@ -2,8 +2,6 @@
 import numpy as npy
 import matplotlib.pyplot as plt
 import rospy
-# from std_msgs.msg import String
-# import roslib
 import sys
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt 
@@ -18,24 +16,15 @@ discrete_size = 50
 
 #Action size also determines number of convolutional filters. 
 action_size = 8
-# action_space = [[0,1],[1,0],[0,-1],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]
 action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
 
-# basis_functions = npy.loadtxt(str(sys.argv[1]))
-# reward_weights = npy.loadtxt(str(sys.argv[2]))
-# basis_functions = basis_functions.reshape((basis_size,discrete_size,discrete_size))
-
-# reward_function = basis_functions[0]*reward_weights[0]+basis_functions[2]*reward_weights[2]+basis_functions[1]*reward_weights[1]
-
-#Static / instantaneous reward. 
-# reward_function = npy.loadtxt(str(sys.argv[1]))
-# reward_function = basis_functions[0,:,:]
-# reward_function /=1000.0 
 time_limit = 100
+
+npy.set_printoptions(precision=3)
 
 value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
@@ -65,43 +54,27 @@ def conv_transition_filters():
 	trans_mat[7] = npy.rot90(trans_mat_2,2)
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
-	for i in range(0,action_size):
-		trans_mat[i] = npy.fliplr(trans_mat[i])
-		trans_mat[i] = npy.flipud(trans_mat[i])
-
+	# for i in range(0,action_size):
+	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
+	# 	trans_mat[i] = npy.flipud(trans_mat[i])
 
 conv_transition_filters()
 
 print "Transition Matrices:\n",trans_mat
 
-# print "\nHere's the reward.\n"
-# for i in range(0,discrete_size):
-# 	print reward_function[i]
-
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 target_belief = npy.zeros(shape=(discrete_size,discrete_size))
 
-from_state_belief[24,24]=0.8
-from_state_belief[25,24]=0.2
+from_state_belief[24,24]=0.2
+from_state_belief[25,24]=0.8
 
 current_pose=[24,24]
 
 trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
 
-def reset_belief():
-	global current_pose
-	max_val_location = npy.unravel_index(npy.argmax(from_state_belief),from_state_belief.shape)
-	print "Reset:",max_val_location
-	# from_state_belief[:,:]=0.
-	# from_state_belief[max_val_location[0],max_val_location[1]]=1.
-
-
 def initialize_unknown_transitions():
 	global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	# global target_belief
 
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
@@ -112,20 +85,62 @@ def initialize_unknown_transitions():
 
 initialize_unknown_transitions()
 
-# def calculate_target(from_state,to_state,action_index):
-# def calculate_target(to_state):
+obs_space = 3
+observation_model = npy.zeros(shape=(obs_space,obs_space))
+
+def initialize_observation():
+	# print "bleh"
+	global observation_model
+	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
+	print observation_model
+
+initialize_observation()
+
+def fuse_observations():
+	global from_state_belief
+	global current_pose
+	global observation_model
+
+	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+
+	# l = obs_space/2
+	# for i in range(-l,l+1):
+	# 	for j in range(-l,l+1):
+	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
+
+	for i in range(0,obs_space):
+		for j in range(0,obs_space):
+			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
+
+	print "Dummy.",dummy
+	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+
+# observation_model()
+
 def calculate_target(action_index):
 	# global trans_mat_unknown
 	# global to_state_belief
 	# global from_state_belief
 	global target_belief
 
+	#TARGET TYPE 1 
 	# target_belief[:,:]=0.
 	# target_belief[to_state[0],to_state[1]]=1.
-	# target_belief = copy.deepcopy(from_state_belief)
+
+	#TARGET TYPE 2: actual_T * from_belief
+	# target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
-	if (target_belief.sum()<1.):
-		target_belief /= target_belief.sum()
+	
+	#TARGET TYPE 3: 
+	# target_belief = from_state_belief
+	# target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
+	#Fuse with Observations
+
+	#TARGET TYPE 4: 
+	
+
+	# if (target_belief.sum()<1.):
+	# 	target_belief /= target_belief.sum()
 
 def belief_prop(action_index):
 	global trans_mat_unknown
@@ -145,7 +160,7 @@ def back_prop(action_index):
 	global target_belief
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 1
+	alpha = 0.1
 
 	w = transition_space/2
 	print "W:",w
@@ -154,35 +169,32 @@ def back_prop(action_index):
 
 	print "From:"
 	for i in range(20,30):
-		print from_state_belief[i,20:30]
+		print from_state_belief[50-i,20:30]
+	# for i in range(0,50):
+	# 	print from_state_belief[i,0:50]
 	print "To:"
 	for i in range(20,30):
-		print to_state_belief[i,20:30]
+		print to_state_belief[50-i,20:30]
+	# for i in range(0,50):
+	# 	print to_state_belief[i,0:50]
 	print "Target:",
 	for i in range(20,30):
-		print target_belief[i,20:30]
+		print target_belief[50-i,20:30]
+	# for i in range(0,50):	
+	# 	print target_belief[i,0:50]
+
 
 	for ai in range(-w,w+1):
 		for aj in range(-w,w+1):
 			for i in range(0,discrete_size-2):
 				for j in range(0,discrete_size-2):
 
-			# 		loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
-			# 		# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
-
-			# trans_mat_unknown[action_index,ai,aj] -= alpha * loss[ai,aj]
-			# if (trans_mat_unknown[action_index,ai,aj]<0):
-			# 	trans_mat_unknown[action_index,ai,aj]=0
-			# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
-
 					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
-					# loss[ai,aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i+ai,j+aj])
 
-			trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
+			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
 			if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
 				trans_mat_unknown[action_index,w+ai,w+aj]=0
 			trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
-
 
 def master(action_index):
 	global trans_mat_unknown
@@ -191,34 +203,22 @@ def master(action_index):
 	global target_belief
 	global current_pose
 
-	# if (random.random()>0.):
-	# 	reset_belief()
-
+	fuse_observations()
 	belief_prop(action_index)
 	calculate_target(action_index)
 	back_prop(action_index)
 	
 	# from_state_belief = to_state_belief
 	##### IN THE ALTERNATE GRAPH, WE UPDATE FROM_STATE_BELIEF AS TARGET_BELIEF
-	from_state_belief = copy.deepcopy(target_belief)
-	if (from_state_belief.sum()<1.):
-		from_state_belief /= from_state_belief.sum()
 
+	from_state_belief = copy.deepcopy(target_belief)
+	# fuse_observations()
+	# back_prop(action_index)
 
 	print "current_pose:",current_pose
 	print "Transition Matrix: ",action_index,"\n"
-	print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
-
-# dummy = 'y'
-# t=0
-# while (dummy=='y'):
-# 	# for i in range(0,discrete_size):
-# 	# 	print "From state belief.",from_state_belief[i,:]
-# 	# for i in range(0,discrete_size):
-# 	# 	print "To state belief.",to_state_belief[i,:]
-# 	master(t)
-# 	t+=1
-# 	dummy=raw_input("Enter a key.")
+	print trans_mat_unknown[action_index,:,:]
+	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
 state_counter = 0
 action = 'w'
@@ -283,7 +283,8 @@ while (action!='q'):
 		# path_plot[current_pose[0]][current_pose[1]]=1				
 		master(action_index)
 
-		
+
+
 
 def conv_layer():	
 	global value_function
@@ -303,7 +304,8 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = copy.deepcopy(value_function + reward_function)
+	# value_function = copy.deepcopy(value_function + reward_function)
+	value_function += reward_function
 
 def recurrent_value_iteration():
 	global value_function
@@ -338,4 +340,3 @@ def recurrent_value_iteration():
 # with file('value_function.txt','w') as outfile: 
 # 	outfile.write('#Value Function.\n')
 # 	npy.savetxt(outfile,1000*value_function,fmt='%-7.2f')
-

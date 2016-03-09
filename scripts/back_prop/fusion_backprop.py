@@ -114,7 +114,7 @@ def fuse_observations():
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 
 	print "Dummy.",dummy
-	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 # observation_model()
 
@@ -129,7 +129,7 @@ def calculate_target(action_index):
 	# target_belief[to_state[0],to_state[1]]=1.
 
 	#TARGET TYPE 2: actual_T * from_belief
-	target_belief = from_state_belief
+	# target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
 	
 	#TARGET TYPE 3: 
@@ -236,7 +236,7 @@ def master(action_index):
 	# from_state_belief = to_state_belief
 	##### IN THE ALTERNATE GRAPH, WE UPDATE FROM_STATE_BELIEF AS TARGET_BELIEF
 
-	from_state_belief = target_belief
+	from_state_belief = copy.deepcopy(target_belief)
 	# fuse_observations()
 	# back_prop(action_index)
 
@@ -331,7 +331,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function += reward_function
 
 def recurrent_value_iteration():
 	global value_function

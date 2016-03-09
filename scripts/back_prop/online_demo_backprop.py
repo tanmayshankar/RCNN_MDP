@@ -100,14 +100,17 @@ def initialize_unknown_transitions():
 initialize_unknown_transitions()
 
 # def calculate_target(from_state,to_state,action_index):
-def calculate_target(to_state):
+# def calculate_target(to_state):
+def calculate_target(action_index):
 	# global trans_mat_unknown
 	# global to_state_belief
 	# global from_state_belief
 	global target_belief
 
-	target_belief[:,:]=0.
-	target_belief[to_state[0],to_state[1]]=1.
+	# target_belief[:,:]=0.
+	# target_belief[to_state[0],to_state[1]]=1.
+	# target_belief = from_state_belief
+	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
 
 def belief_prop(action_index):
 	global trans_mat_unknown
@@ -127,7 +130,7 @@ def back_prop(action_index):
 	global target_belief
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.01
+	alpha = 0.1
 
 	for ai in range(-1,transition_space/2+1):
 		for aj in range(-1,transition_space/2+1):
@@ -153,15 +156,10 @@ def master(action_index):
 	global current_pose
 
 	belief_prop(action_index)
-	# current_pose[0] += action_space[action_index][0]
-	# current_pose[1] += action_space[action_index][1]
-	calculate_target(current_pose)
-
-	# calculate_target([23+t,24])
-	# calculate_target
+	calculate_target(action_index)
 
 	back_prop(action_index)
-	from_state_belief = to_state_belief
+	from_state_belief = copy.deepcopy(to_state_belief)
 	print "current_pose:",current_pose
 	print "Transition Matrix: ",action_index,"\n",trans_mat_unknown[action_index,:,:]
 
@@ -240,8 +238,6 @@ while (action!='q'):
 
 		action = raw_input("Hit a key now: ")
 
-
-
 def conv_layer():	
 	global value_function
 	global trans_mat
@@ -260,7 +256,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function = copy.deepcopy(value_function + reward_function)
 
 def recurrent_value_iteration():
 	global value_function
