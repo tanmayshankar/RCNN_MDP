@@ -9,21 +9,34 @@ This code base targets 3 problems:
 - Learning the State Transition models and Observation model in a POMDP/PODRL setting from simulations.
 - Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations.  
 
+**Value Iteration RCNN**
+
 Problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. Here's an example: 
 
-./scripts/feedforward_rcnn/rcnn_mdp_value_iteration.py data/trial_3/reward_function.txt
+`./scripts/feedforward_rcnn/rcnn_mdp_value_iteration.py data/trial_3/reward_function.txt`
 
 If you'd like to run it with a different transition function of your choice: 
-./scripts/feedforward_rcnn/variable_transition_size.py data/trial_3/reward_function.txt
+
+`./scripts/feedforward_rcnn/variable_transition_size.py data/trial_3/reward_function.txt`
+
+**Displaying the optimal Policy**
 
 Once either of the feedforward passes are run, you may display the policy, reward and value functions by running the following:
 
-./scripts/display/display_policy.py output_policy.txt reward_function.txt value_function.txt
+`./scripts/display/display_policy.py output_policy.txt reward_function.txt value_function.txt`
+
+**Learning Transition Model**
 
 Currently, you may observe the outputs of learning the transition probabilities by running any of the following codes:
 
-./scripts/belief_prop_rcnn/calc_trans.py
+`./scripts/belief_prop_rcnn/calc_trans.py`
 
 To replan (execute value iteration) with the learnt transition model, run: 
 
-./scripts/feedforward_rcnn/learnt_trans_feedforward.py reward_function.txt estimated_transition.txt
+`./scripts/feedforward_rcnn/learnt_trans_feedforward.py reward_function.txt estimated_transition.txt`
+
+**Following the optimal Policy**
+
+To watch an agent follow the optimal policy from a random position, with the learnt transition values, run: 
+
+`./scripts/follow_policy/follow_policy_trans.py output_policy.txt reward_function.txt value_function.txt estimated_transition.txt`
