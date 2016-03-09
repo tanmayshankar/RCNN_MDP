@@ -24,7 +24,8 @@ action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
-time_limit = 1000
+# time_limit = 1000
+time_limit = 500
 
 npy.set_printoptions(precision=3)
 
@@ -76,7 +77,7 @@ def initialize_transitions():
 	trans_mat_2+=epsilon
 
 	trans_mat_1/=trans_mat_1.sum()
-	trans_mat_2/=trans_mat_2.sum()
+ 	trans_mat_2/=trans_mat_2.sum()
 
 	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
 	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
@@ -97,7 +98,6 @@ def initialize_transitions():
 	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
 	# 	trans_mat[i] = npy.flipud(trans_mat[i])
 
-	
 
 def initialize_unknown_transitions():
 	global trans_mat_unknown
@@ -126,25 +126,16 @@ def initialize_all():
 	initialize_unknown_transitions()
 
 def fuse_observations():
-	# global from_state_belief
-	# global current_pose
-	# global observation_model
-	
 	global from_state_belief, current_pose, observation_model
 
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
-	# l = obs_space/2
-	# for i in range(-l,l+1):
-	# 	for j in range(-l,l+1):
-	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
 
 	for i in range(0,obs_space):
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 
 	# print "Dummy.",dummy
-	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief,current_pose
@@ -175,8 +166,6 @@ def display_beliefs():
 	for i in range(current_pose[0]-5,current_pose[0]+5):
 		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
 
-
-
 def bayes_obs_fusion():
 	global to_state_belief
 	global current_pose
@@ -189,7 +178,7 @@ def bayes_obs_fusion():
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 	
-	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calculate_target(action_index):
 	# global trans_mat_unknown
@@ -202,7 +191,7 @@ def calculate_target(action_index):
 	# target_belief[to_state[0],to_state[1]]=1.
 
 	#TARGET TYPE 2: actual_T * from_belief
-	target_belief = from_state_belief
+	# target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
 	
 	#TARGET TYPE 3: 
@@ -301,51 +290,12 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
-def back_prop_2(action_index, time_index):
-	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	# global target_belief
-
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
-
-	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.01
-
-	alpha = learning_rate - annealing_rate * time_index
-
-	lamda = 1.
-
-	w = transition_space/2
-
-	delta = 0.
-	for ai in range(-w,w+1):
-		for aj in range(-w,w+1):
-			
-			# loss[w+ai,w+aj] += lamda * (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-			
-			for i in range(1,discrete_size-2):
-				for j in range(1,discrete_size-2):
-
-					temp_1 = 0.
-					if (w+i-ai>=50)or(w+i-ai<0)or(w+j-aj>=50)or(w+j-aj<0):
-						temp_1 =0.
-					else:
-						temp_1 = from_state_belief[w+i-ai,w+j-aj]
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*temp_1		
-					
-			temp = trans_mat_unknown[action_index,w+ai,w+aj] - alpha * loss[w+ai,w+aj]
-			
-			if (temp<=1)and(temp>=0):
-				trans_mat_unknown[action_index,w+ai,w+aj] = temp
-		
-	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
-
 def back_prop(action_index,time_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
 	alpha = learning_rate - annealing_rate * time_index
+	# alpha = learning_rate
 	lamda = 1.
 
 	w = transition_space/2
@@ -355,34 +305,45 @@ def back_prop(action_index,time_index):
 			loss_1=0.
 			for i in range(0,discrete_size):
 				for j in range(0,discrete_size):
-					temp_1=0.
-					if (i-m<0)or(i-m>=discrete_size)or(j-n<0)or(j-n>discrete_size):
-					# if (w-m+i<0)or(w-m+i>=discrete_size)or(w-n+j<0)or(w-n+j>discrete_size):
-						temp_1=0.
-					else:
-						temp_1 = from_state_belief[i-m,j-n]			
-					# loss[w+m,w+n] -= 2*(target_belief[i,j]-to_state_belief[i,j])*temp_1
-					loss_1 -= 2*(target_belief[i,j]-to_state_belief[i,j])*temp_1
+					# temp_1=0.
+					# if (i-m<0)or(i-m>=discrete_size)or(j-n<0)or(j-n>discrete_size):
+					# # if (w-m+i<0)or(w-m+i>=discrete_size)or(w-n+j<0)or(w-n+j>discrete_size):
+					# 	temp_1=0.
+					# else:
+					# 	temp_1 = from_state_belief[i-m,j-n]			
 
+					# if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
+					# 	temp_1 = from_state_belief[i-m,j-n]
+					# loss_1 -= 2*(target_belief[i,j]-to_state_belief[i,j])*temp_1
+
+					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
+						loss_1 -= 2*(target_belief[i,j]-to_state_belief[i,j])*from_state_belief[i-m,j-n]
+			
 			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]
-			temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1
-			if (temp>=0)and(temp<=1):
-				trans_mat_unknown[action_index,w+m,w+n] = temp
-	trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
+			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1
+			# if (temp>=0)and(temp<=1):
+			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
+				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
+
+	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
 
 def recurrence():
 	global from_state_belief,target_belief
-	from_state_belief = target_belief
+	from_state_belief = copy.deepcopy(target_belief)
 
 def master(action_index, time_index):
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
 	belief_prop(action_index)
-	# # bayes_obs_fusion()
 	simulated_model(action_index)
-	back_prop_2(action_index, time_index)
+	back_prop(action_index, time_index)
 	recurrence()	
+
+	# simulated_model(action_index)	
+	# belief_prop(action_index)	
+	# back_prop(action_index, time_index)
+	# recurrence()
 
 	# print "Transition Matrix: ",action_index,"\n"
 	# print trans_mat_unknown[action_index,:,:]
@@ -406,7 +367,10 @@ def input_actions():
 input_actions()
 
 print "Transition Matrix: "
-print trans_mat_unknown
+# print trans_mat_unknown
+trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
+print trans_mat_unknown	
+
 
 ######TO RUN FEEDFORWARD PASSES OF THE RECURRENT CONV NET.#########
 
@@ -428,7 +392,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function += reward_function
 
 def recurrent_value_iteration():
 	global value_function

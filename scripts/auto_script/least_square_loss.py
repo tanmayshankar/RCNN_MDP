@@ -141,7 +141,7 @@ def fuse_observations():
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 
 	# print "Dummy.",dummy
-	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief,current_pose
@@ -186,7 +186,7 @@ def bayes_obs_fusion():
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 	
-	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calculate_target(action_index):
 	# global trans_mat_unknown
@@ -199,7 +199,7 @@ def calculate_target(action_index):
 	# target_belief[to_state[0],to_state[1]]=1.
 
 	#TARGET TYPE 2: actual_T * from_belief
-	target_belief = from_state_belief
+	# target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
 	
 	#TARGET TYPE 3: 
@@ -323,10 +323,11 @@ def back_prop(action_index):
 
 					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
 					# delta = (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j]) 
+					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j]) 
 
 					#*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
 					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
+					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[i,j]) #+ delta
 					
 					
 					
@@ -339,7 +340,7 @@ def back_prop(action_index):
 
 def recurrence():
 	global from_state_belief,target_belief
-	from_state_belief = target_belief
+	from_state_belief = copy.deepcopy(target_belief)
 
 def master(action_index):
 
@@ -441,7 +442,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function += reward_function
 
 def recurrent_value_iteration():
 	global value_function

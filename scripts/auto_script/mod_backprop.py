@@ -62,13 +62,20 @@ def initialize_state():
 	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
 
+
 def initialize_transitions():
 	global trans_mat
-	# trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
-	# trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+	trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
+	trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+	
+	#Adding epsilon so that the cummulative distribution has unique values. 
+	epsilon=0.0001
+	trans_mat_1+=epsilon
+	trans_mat_2+=epsilon
 
-	trans_mat_1 = [[0.,0.,0.1,0.,0.],[0.,0.05,0.6,0.05,0.],[0.,0.05,0.1,0.05,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
-	trans_mat_2 = [[0.1,0.05,0.,0.,0.],[0.05,0.6,0.05,0.,0.],[0.,0.05,0.1,0.,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
+	trans_mat_1/=trans_mat_1.sum()
+	trans_mat_2/=trans_mat_2.sum()
+
 	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
 	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
 	
@@ -129,7 +136,7 @@ def fuse_observations():
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 
 	# print "Dummy.",dummy
-	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def bayes_obs_fusion():
 	global to_state_belief, current_pose, observation_model, obs_space, norm_factor
@@ -145,7 +152,7 @@ def bayes_obs_fusion():
 	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
 
 	norm_factor = dummy.sum()				
-	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def bayes_fusion_target():
 	global target_belief, current_pose, observation_model, obs_space
@@ -156,7 +163,7 @@ def bayes_fusion_target():
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-h+i,current_pose[1]-h+j] = target_belief[current_pose[0]-h+i,current_pose[1]-h+j]*observation_model[i,j]
 	
-	target_belief[:,:] = dummy[:,:]/dummy.sum()
+	target_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calculate_target(action_index):
 	global target_belief
@@ -166,7 +173,7 @@ def calculate_target(action_index):
 	# target_belief[to_state[0],to_state[1]]=1.
 
 	#TARGET TYPE 2: actual_T * from_belief
-	target_belief = from_state_belief
+	# target_belief = from_state_belief
 	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
 	
 	#TARGET TYPE 3: 
@@ -347,7 +354,7 @@ def trans_back_prop(action_index):
 
 def recurrence():
 	global from_state_belief,target_belief
-	from_state_belief = target_belief
+	from_state_belief = copy.deepcopy(target_belief)
 
 def master(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
@@ -493,7 +500,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function+= reward_function
 
 def recurrent_value_iteration():
 	global value_function

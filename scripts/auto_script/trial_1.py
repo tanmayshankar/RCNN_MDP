@@ -61,10 +61,19 @@ def initialize_state():
 	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
 
+
 def initialize_transitions():
 	global trans_mat
-	trans_mat_1 = [[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]]
-	trans_mat_2 = [[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]]
+	trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
+	trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+	
+	#Adding epsilon so that the cummulative distribution has unique values. 
+	epsilon=0.0001
+	trans_mat_1+=epsilon
+	trans_mat_2+=epsilon
+
+	trans_mat_1/=trans_mat_1.sum()
+	trans_mat_2/=trans_mat_2.sum()
 
 	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
 	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]

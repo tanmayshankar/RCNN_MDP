@@ -11,7 +11,6 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
-
 ###### DEFINITIONS
 
 basis_size = 3
@@ -66,7 +65,7 @@ def initialize_state():
 	# from_state_belief[25,24]=0.8
 
 	current_pose=[24,24]
-	previous_pose = [24,24]
+	previous_pose =[24,24]
 
 def initialize_transitions():
 	global trans_mat
@@ -129,25 +128,15 @@ def initialize_all():
 	initialize_unknown_transitions()
 
 def fuse_observations():
-	# global from_state_belief
-	# global current_pose
-	# global observation_model
-	
 	global from_state_belief, current_pose, observation_model
 
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
-	# l = obs_space/2
-	# for i in range(-l,l+1):
-	# 	for j in range(-l,l+1):
-	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
 
 	for i in range(0,obs_space):
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 
-	# print "Dummy.",dummy
-	from_state_belief[:,:] = dummy[:,:]/dummy.sum()
+	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief,current_pose
@@ -180,8 +169,6 @@ def display_beliefs():
 	for i in range(current_pose[0]-5,current_pose[0]+5):
 		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
 
-
-
 def bayes_obs_fusion():
 	global to_state_belief
 	global current_pose
@@ -194,32 +181,7 @@ def bayes_obs_fusion():
 		for j in range(0,obs_space):
 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
 	
-	to_state_belief[:,:] = dummy[:,:]/dummy.sum()
-
-def calculate_target(action_index):
-	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	global target_belief
-
-	#TARGET TYPE 1 
-	# target_belief[:,:]=0.
-	# target_belief[to_state[0],to_state[1]]=1.
-
-	#TARGET TYPE 2: actual_T * from_belief
-	target_belief = from_state_belief
-	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
-	
-	#TARGET TYPE 3: 
-	# target_belief = from_state_belief
-	# target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
-	#Fuse with Observations
-
-	#TARGET TYPE 4: 
-	
-
-	# if (target_belief.sum()<1.):
-	# 	target_belief /= target_belief.sum()
+	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def remap_indices(bucket_index):
 
@@ -296,8 +258,6 @@ def simulated_model(action_index):
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
 	
-	
-
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
 
@@ -305,46 +265,6 @@ def belief_prop(action_index):
 	if (to_state_belief.sum()<1.):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
-
-def back_prop(action_index):
-	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	# global target_belief
-
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
-
-	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.1
-
-	lamda = 1.
-
-	w = transition_space/2
-
-	delta = 0.
-	for ai in range(-w,w+1):
-		for aj in range(-w,w+1):
-			
-			loss[w+ai,w+aj] += lamda * (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-			
-			for i in range(0,discrete_size-2):
-				for j in range(0,discrete_size-2):
-
-					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
-					# delta = (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j]) 
-
-					#*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					
-					
-					
-			# trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
-			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
-			# if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
-			# 	trans_mat_unknown[action_index,w+ai,w+aj]=0
-			# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
-	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
 def difference_grad(action_index, time_index):
 
@@ -361,9 +281,13 @@ def difference_grad(action_index, time_index):
 	for m in range(-w,w+1):
 		for n in range(-w,w+1):
 			# loss[w+m,w+n] = target_belief[previous_pose[0]+m,previous_pose[1]+n] - to_state_belief[previous_pose[0]+m,previous_pose[1]+n]
-			loss[w+m,w+n] = target_belief[previous_pose[0]+m,previous_pose[1]+n] - to_state_belief[current_pose[0]+m,current_pose[1]+n]
-			temp = trans_mat_unknown[action_index,w+m,w+n] + alpha * loss[w+m,w+n]
-			# trans_mat_unknown[action_index,w+m,w+n] += alpha * loss[w+m,w+n]
+			
+			for u in range(-w,w+1):
+				for v in range(-w,w+1):
+					loss[w+m,w+n] -= target_belief[previous_pose[0]+u,previous_pose[1]+v] - to_state_belief[current_pose[0]+u,current_pose[1]+v]
+			
+			temp = trans_mat_unknown[action_index,w+m,w+n] - alpha * loss[w+m,w+n]
+					# trans_mat_unknown[action_index,w+m,w+n] += alpha * loss[w+m,w+n]
 			if (temp<=1)and(temp>=0):
 				trans_mat_unknown[action_index,w+m,w+n]=temp
 
@@ -372,7 +296,7 @@ def difference_grad(action_index, time_index):
 
 def recurrence():
 	global from_state_belief,target_belief
-	from_state_belief = target_belief
+	from_state_belief = copy.deepcopy(target_belief)
 
 def master(action_index, time_index):
 
@@ -467,7 +391,7 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	value_function += reward_function
 
 def recurrent_value_iteration():
 	global value_function
