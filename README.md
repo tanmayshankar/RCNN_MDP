@@ -6,7 +6,8 @@ This code base targets 3 problems:
 
 1. Solving Value / Policy Iteration in a standard MDP using Feedforward passes of an RCNN. 
 - Representing the Bayes Filter state belief update as feedforward passes of an RCNN. 
-- Learning the State Transition models and Observation model in a POMDP/PODRL setting from simulations / demonstrations, and reward functions in an Inverse Reinforcement Learning framework. 
+- Learning the State Transition models and Observation model in a POMDP/PODRL setting from simulations.
+- Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations.  
 
 Problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. 
 
@@ -24,7 +25,7 @@ Example:
 Currently, you may observe the outputs of learning the transition probabilities by running any of the following codes:
 
 1. ./scripts/window_loss/anneal_window_lsq.py
-./scripts/auto_script/difference_loss.py
+- ./scripts/auto_script/difference_loss.py
 - ./scripts/auto_script/least_square_loss.py
 
 
