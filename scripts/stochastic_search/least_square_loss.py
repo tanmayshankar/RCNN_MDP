@@ -53,12 +53,14 @@ obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
 state_counter = 0
 action = 'w'
 
+
 def initialize_state():
 	global current_pose, from_state_belief
 
 	from_state_belief[24,24]=1.
 	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
+
 
 def initialize_transitions():
 	global trans_mat

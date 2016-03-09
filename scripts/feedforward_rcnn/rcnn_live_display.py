@@ -41,9 +41,9 @@ reward_function = npy.loadtxt(str(sys.argv[1]))
 # reward_function = basis_functions[0,:,:]
 # reward_function /=1000.0
 # 
-time_limit = 100
+time_limit = 200
 
-reward_function -= npy.amax(reward_function)/5
+reward_function /= npy.amax(reward_function)
 
 value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
@@ -114,7 +114,19 @@ def conv_layer():
 
 def reward_bias():
 	global value_function
-	value_function = value_function + reward_function
+	rew_rate = 0.2
+	value_function += reward_function
+	# value_function += rew_rate*reward_function
+
+def normalize_value():	
+	global value_function
+	# value_function /= value_function.sum()
+	value_function /= npy.amax(value_function)
+
+def normalize_reward():
+	global reward_function
+	reward_function /= reward_function
+
 
 def recurrent_value_iteration():
 	global value_function, optimal_policy
@@ -124,17 +136,13 @@ def recurrent_value_iteration():
 	U = npy.zeros(shape=(discrete_size,discrete_size))
 	V = npy.zeros(shape=(discrete_size,discrete_size))
 
-	fig, ax = plt.subplots()
-	# im = ax.imshow(reward_function, origin='lower',extent=[0,49,0,49])
-	im = ax.imshow(value_function, origin='lower',extent=[0,49,0,49])
-	ax.quiver(V,U)
-	fig.colorbar(im)
-	ax.set(aspect=1, title='Quiver Plot')
-	plt.show()
+	# normalize_reward()
 
 	while (t<time_limit):
 		conv_layer()
 		reward_bias()		
+		# normalize_value()
+		
 		t+=1
 		print t
 
@@ -151,6 +159,11 @@ def recurrent_value_iteration():
 			fig.colorbar(im)
 			ax.set(aspect=1, title='Quiver Plot')
 			plt.show()	
+
+		if (t>50):
+			reward_function = npy.loadtxt(str(sys.argv[2]))
+			reward_function /= npy.amax(reward_function)
+			# reward_function /= 
 	
 recurrent_value_iteration()
 

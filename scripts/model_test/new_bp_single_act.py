@@ -15,17 +15,17 @@ import copy
 ###### DEFINITIONS
 
 basis_size = 3
-discrete_size = 50
+discrete_size = 11
 
 #Action size also determines number of convolutional filters. 
 action_size = 8
-action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
+action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
 ## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
-# time_limit = 1000
-time_limit = 5
+time_limit = 1000
+# time_limit = 5
 
 npy.set_printoptions(precision=3)
 
@@ -61,9 +61,9 @@ annealing_rate = (learning_rate/5)/time_limit
 def initialize_state():
 	global current_pose, from_state_belief
 
-	from_state_belief[24,24]=1.
+	from_state_belief[5,5]=1.
 	# from_state_belief[25,24]=0.8
-	current_pose=[24,24]
+	current_pose=[5,5]
 
 
 def initialize_transitions():
@@ -285,10 +285,11 @@ def simulated_model(action_index):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
 		
-		# print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
+		print "Action taken: ",action_space[remap_index]		
 		
 	target_belief[:,:] = 0. 
-	target_belief[current_pose[0],current_pose[1]]=1.
+	# target_belief[current_pose[0],current_pose[1]]=1.
+	target_belief[action_space[remap_index,0],action_space[remap_index,1]]=1.
 	
 	
 
@@ -300,47 +301,13 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
-def back_prop_2(action_index, time_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
-
-	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.01
-
-	alpha = learning_rate - annealing_rate * time_index
-
-	lamda = 1.
-
-	w = transition_space/2
-
-	delta = 0.
-	for ai in range(-w,w+1):
-		for aj in range(-w,w+1):
-			
-			# loss[w+ai,w+aj] += lamda * (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-			
-			for i in range(1,discrete_size-2):
-				for j in range(1,discrete_size-2):
-
-					temp_1 = 0.
-					if (w+i-ai>=50)or(w+i-ai<0)or(w+j-aj>=50)or(w+j-aj<0):
-						temp_1 =0.
-					else:
-						temp_1 = from_state_belief[w+i-ai,w+j-aj]
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*temp_1		
-					
-			temp = trans_mat_unknown[action_index,w+ai,w+aj] - alpha * loss[w+ai,w+aj]
-			
-			if (temp<=1)and(temp>=0):
-				trans_mat_unknown[action_index,w+ai,w+aj] = temp
-		
-	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
 def back_prop(action_index,time_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	# alpha = learning_rate - annealing_rate * time_index
-	alpha = learning_rate
+	alpha = learning_rate - annealing_rate * time_index
+	# alpha = learning_rate
 	lamda = 1.
 
 	w = transition_space/2
@@ -374,16 +341,17 @@ def back_prop(action_index,time_index):
 
 def recurrence():
 	global from_state_belief,target_belief
-	from_state_belief = target_belief
+	# from_state_belief = target_belief
+	from_state_belief[:,:] =0.
+	from_state_belief[5,5]=1.
 
 def master(action_index, time_index):
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
 	belief_prop(action_index)
-	# # bayes_obs_fusion()
 	simulated_model(action_index)
-	back_prop_2(action_index, time_index)
+	back_prop(action_index, time_index)
 	recurrence()	
 
 	# print "Transition Matrix: ",action_index,"\n"
@@ -401,14 +369,14 @@ def input_actions():
 	while (iterate<=time_limit):		
 		iterate+=1
 		# action_index = random.randrange(0,8)
-		action_index=iterate%8
+		action_index=0
 		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
 		master(action_index, iterate)
 
 input_actions()
 
 print "Transition Matrix: "
-print trans_mat_unknown
+# print trans_mat_unknown
 trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
 print trans_mat_unknown	
 

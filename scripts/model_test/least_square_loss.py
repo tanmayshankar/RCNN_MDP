@@ -330,11 +330,11 @@ def master(action_index):
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
-	# belief_prop(action_index)
+	belief_prop(action_index)
 	# bayes_obs_fusion()
 	simulated_model(action_index)
-	# back_prop(action_index)
-	# recurrence()	
+	back_prop(action_index)
+	recurrence()	
 	# display_beliefs()
 	
 	# print "current_pose:",current_pose

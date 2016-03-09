@@ -24,7 +24,8 @@ action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
-time_limit = 100
+# time_limit = 1000
+time_limit = 500
 
 npy.set_printoptions(precision=3)
 
@@ -53,12 +54,17 @@ obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
 state_counter = 0
 action = 'w'
 
+learning_rate = 0.1
+annealing_rate = (learning_rate/5)/time_limit
+
+
 def initialize_state():
 	global current_pose, from_state_belief
 
 	from_state_belief[24,24]=1.
 	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
+
 
 def initialize_transitions():
 	global trans_mat
@@ -71,7 +77,7 @@ def initialize_transitions():
 	trans_mat_2+=epsilon
 
 	trans_mat_1/=trans_mat_1.sum()
-	trans_mat_2/=trans_mat_2.sum()
+ 	trans_mat_2/=trans_mat_2.sum()
 
 	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
 	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
@@ -88,9 +94,9 @@ def initialize_transitions():
 
 	print "Transition Matrices:\n",trans_mat
 
-	for i in range(0,action_size):
-		trans_mat[i] = npy.fliplr(trans_mat[i])
-		trans_mat[i] = npy.flipud(trans_mat[i])
+	# for i in range(0,action_size):
+	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
+	# 	trans_mat[i] = npy.flipud(trans_mat[i])
 
 	
 
@@ -169,8 +175,6 @@ def display_beliefs():
 	print "Target:"
 	for i in range(current_pose[0]-5,current_pose[0]+5):
 		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
-
-
 
 def bayes_obs_fusion():
 	global to_state_belief
@@ -261,32 +265,31 @@ def simulated_model(action_index):
 		# bucket_index=8
 	# else:
 
-	print "BUCKET SPACE:",bucket_space
-	print "Random:",rand_num
+	# print "BUCKET SPACE:",bucket_space
+	# print "Random:",rand_num
 	
 	for i in range(1,transition_space**2):
 		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
 			bucket_index=i
-			print "Bucket Index chosen: ",bucket_index
+			# print "Bucket Index chosen: ",bucket_index
 
 	remap_index = remap_indices(bucket_index)
 	# print "Remap Index:",remap_index
-	print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
+	# print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
 
-	if (bucket_index==((transition_space**2)/2)):
+	# if (bucket_index==((transition_space**2)/2)):
 		# print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
-		print "No action."		
-	else:
+		# print "No action."		
+	# else:
+	if (bucket_index!=((transition_space**2)/2)):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
 		
-		print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
+		# print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
 		
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
 	
-	
-
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
 
@@ -295,115 +298,75 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
-def back_prop(action_index):
-	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	# global target_belief
-
+def back_prop(action_index,time_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.01
-
+	alpha = learning_rate - annealing_rate * time_index
+	# alpha = learning_rate
 	lamda = 1.
 
 	w = transition_space/2
 
-	delta = 0.
-	for ai in range(-w,w+1):
-		for aj in range(-w,w+1):
+	for m in range(-w,w+1):
+		for n in range(-w,w+1):
+			loss_1=0.
+			for i in range(0,discrete_size):
+				for j in range(0,discrete_size):
+					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
+						loss_1 -= 2*(target_belief[i,j]-to_state_belief[i,j])*from_state_belief[i-m,j-n]
 			
-			loss[w+ai,w+aj] += lamda * (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-			
-			for i in range(0,discrete_size-2):
-				for j in range(0,discrete_size-2):
+			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
+			# if (temp>=0)and(temp<=1):
+			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
+				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
 
-					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
-					# delta = (trans_mat_unknown[action_index,:,:].sum()-1.) * trans_mat_unknown[action_index,w+ai,w+aj]
-					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j]) 
-
-					#*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					
-					
-					
-			# trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
-			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
-			# if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
-			# 	trans_mat_unknown[action_index,w+ai,w+aj]=0
-			# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
-	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
+	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
 
 def recurrence():
 	global from_state_belief,target_belief
 	from_state_belief = target_belief
 
-def master(action_index):
+def master(action_index, time_index):
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
-	# belief_prop(action_index)
-	# # bayes_obs_fusion()
-	# simulated_model(action_index)
-	# back_prop(action_index)
-	# recurrence()	
-
-
-	###Fiddling with the order: 
-
-	
-	# bayes_obs_fusion()
-	display_beliefs()
-	simulated_model(action_index)	
-	belief_prop(action_index)	
-	back_prop(action_index)
+	belief_prop(action_index)
+	simulated_model(action_index)
+	back_prop(action_index, time_index)
 	recurrence()	
-
-
-
-
-	
-	# print "current_pose:",current_pose
-	print "Transition Matrix: ",action_index,"\n"
-	print trans_mat_unknown[action_index,:,:]
-
-	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
 initialize_all()
 
 def input_actions():
-	global action
-	global state_counter
-	global action_index
-	global current_pose
+	global action, state_counter, action_index, current_pose
 
-	# while (action!='q'):		
 	iterate=0
 
-	while (iterate<=100):		
+	while (iterate<=time_limit):		
 		iterate+=1
-		# select_action()
-		# print iterate
-
 		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		# dum_x = current_pose[0] + action_space[action_index][0]
-		# dum_y = current_pose[1] + action_space[action_index][1]
-
-		# # if ((dum_x<50)and(dum_x>=0)and(dum_y<50)and(dum_y>=0)):
-		# if ((dum_x<49)and(dum_x>=1)and(dum_y<49)and(dum_y>=1)):
-		# 	current_pose[0]=dum_x
-		# 	current_pose[1]=dum_y
-
 		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
-
-
-		master(action_index)
+		master(action_index, iterate)
 
 input_actions()
 
+print "Transition Matrix: "
 print trans_mat_unknown
+trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
+print "Normalized:\n",trans_mat_unknown	
+
+
+
+
+
+
+
+
+
+
+
 
 
 

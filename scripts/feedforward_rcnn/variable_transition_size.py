@@ -23,7 +23,7 @@ action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
 
 #Transition space size determines size of convolutional filters. 
-transition_space = 7
+transition_space = 5
 
 # basis_functions = npy.loadtxt(str(sys.argv[1]))
 # reward_weights = npy.loadtxt(str(sys.argv[2]))
@@ -49,18 +49,18 @@ trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
 
 def conv_transition_filters():
 	global trans_mat
-	# trans_mat_1 = [[0.,0.,0.1,0.,0.],[0.,0.05,0.6,0.05,0.],[0.,0.05,0.1,0.05,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
-	# trans_mat_2 = [[0.1,0.05,0.,0.,0.],[0.05,0.6,0.05,0.,0.],[0.,0.05,0.1,0.,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
+	trans_mat_1 = [[0.,0.,0.1,0.,0.],[0.,0.05,0.6,0.05,0.],[0.,0.05,0.1,0.05,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
+	trans_mat_2 = [[0.1,0.05,0.,0.,0.],[0.05,0.6,0.05,0.,0.],[0.,0.05,0.1,0.,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
 
-	dt1 = [[0.,0.,0.1,0.,0.],[0.,0.05,0.6,0.05,0.],[0.,0.05,0.1,0.05,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
-	dt2 = [[0.1,0.05,0.,0.,0.],[0.05,0.6,0.05,0.,0.],[0.,0.05,0.1,0.,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
-	trans_mat_1 = npy.zeros(shape=(transition_space,transition_space))
-	trans_mat_2 = npy.zeros(shape=(transition_space,transition_space))
+	# dt1 = [[0.,0.,0.1,0.,0.],[0.,0.05,0.6,0.05,0.],[0.,0.05,0.1,0.05,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
+	# dt2 = [[0.1,0.05,0.,0.,0.],[0.05,0.6,0.05,0.,0.],[0.,0.05,0.1,0.,0.],[0.,0.,0.,0.,0.],[0.,0.,0.,0.,0.]]
+	# trans_mat_1 = npy.zeros(shape=(transition_space,transition_space))
+	# trans_mat_2 = npy.zeros(shape=(transition_space,transition_space))
 
-	for i in range(0,5):
-		for j in range(0,5):
-			trans_mat_1[i+1,j+1]=dt1[i][j]
-			trans_mat_2[i+1,j+1]=dt2[i][j]
+	# for i in range(0,5):
+	# 	for j in range(0,5):
+	# 		trans_mat_1[i+1,j+1]=dt1[i][j]
+	# 		trans_mat_2[i+1,j+1]=dt2[i][j]
 
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)

@@ -174,6 +174,78 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
+def full_value(action_index):
+	global trans_mat_unknown
+	global to_state_belief
+	global from_state_belief
+	global target_belief
+	alpha = 0.01
+
+	w = transition_space/2
+	print "W:",w
+	# for ai in range(-transition_space/2,transition_space/2+1):
+		# for aj in range(-transition_space/2,transition_space/2+1):
+
+	print "From:"
+	for i in range(20,30):
+		print from_state_belief[i,20:30]
+	# for i in range(0,50):
+	# 	print from_state_belief[i,0:50]
+	print "To:"
+	for i in range(20,30):
+		print to_state_belief[i,20:30]
+	# for i in range(0,50):
+	# 	print to_state_belief[i,0:50]
+	print "Target:",
+	for i in range(20,30):
+		print target_belief[i,20:30]
+	# for i in range(0,50):	
+	# 	print target_belief[i,0:50]
+
+	trans_linspace_size = 21
+	trans_val_space = npy.linspace(0,1,trans_linspace_size)
+
+	loss = npy.zeros(trans_linspace_size)
+
+	new_trans_mat = npy.zeros(shape=(transition_space,transition_space))
+
+	dummy_max = 10000.
+
+	for ti in range(0,transition_space):
+		for tj in range(0,transition_space):
+			# for v in range(npy.linspace())
+			# for v in trans_val_space:
+
+			loss[:] = 0.
+			dummy_max = 10000.
+			
+			for vi in range(0,trans_linspace_size):
+				for i in range(0,discrete_size):
+					for j in range(0,discrete_size):
+						# loss[vi] += (target_belief[i,j]-to_state_belief[i,j])**2
+
+						loss[vi] += (target_belief[i,j]-to_state_belief[i,j])**2+
+
+			if (loss[vi]<dummy_max):
+				dummy_max = loss[vi]
+				new_trans_mat[ti,tj]=trans_val_space[vi]
+
+			trans_mat_unknown[ti,tj] = (1-alpha)*trans_mat_unknown[ti,tj]+alpha*new_trans_mat[ti,tj]
+
+	# for ai in range(-w,w+1):
+	# 	for aj in range(-w,w+1):
+	# 		for i in range(0,discrete_size-2):
+	# 			for j in range(0,discrete_size-2):
+
+	# 				loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj])
+
+	# 		trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
+	# 		if (trans_mat_unknown[action_index,w+ai,w+aj]<0):
+	# 			trans_mat_unknown[action_index,w+ai,w+aj]=0
+	# 		trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
+
+
+
 def back_prop(action_index):
 	global trans_mat_unknown
 	global to_state_belief
@@ -228,7 +300,8 @@ def master(action_index):
 
 	belief_prop(action_index)
 	calculate_target(action_index)
-	back_prop(action_index)
+	# back_prop(action_index)
+	full_value(action_index)
 	
 	# from_state_belief = to_state_belief
 	##### IN THE ALTERNATE GRAPH, WE UPDATE FROM_STATE_BELIEF AS TARGET_BELIEF

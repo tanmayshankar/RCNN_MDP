@@ -10,6 +10,32 @@ from scipy.stats import rankdata
 from matplotlib.pyplot import *
 from scipy import signal
 import copy
+import heapq
+
+var_size = 9
+
+decision_variables = npy.zeros(var_size)
+
+min_value = 0.
+max_value =  1. 
+
+pop_size = 20
+population = npy.zeros(shape=(pop_size,var_size))
+
+# function_values = npy.zeros(shape=(4,pop_size))
+function_values = npy.zeros(4*pop_size)
+master_function_values = npy.zeros(4*pop_size)
+mod_func_values = npy.zeros(pop_size)
+rel_weights = npy.zeros(pop_size)
+
+sigma = 0.2
+
+neighbour_children = npy.zeros(shape=(pop_size,var_size))
+num_pop_children = npy.zeros(pop_size)
+num_pop_children = num_pop_children.astype(int)
+lc_children = npy.zeros(shape=(pop_size,var_size))
+rri_children = npy.zeros(shape=(pop_size,var_size))
+
 
 
 ###### DEFINITIONS
@@ -39,7 +65,6 @@ gamma = 0.95
 trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
 trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
 
-
 #### DEFINING STATE BELIEF VARIABLES
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
@@ -53,17 +78,199 @@ obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
 state_counter = 0
 action = 'w'
 
-def initialize_state():
-	global current_pose, from_state_belief
+# previous_pose = copy.deepcopy(current_pose)
 
+def calc_mod_values():
+	global mod_func_values, function_values
+	# mod_func_values = function_values[0,:] - npy.amin(function_values[0,:])
+	mod_func_values = function_values[0:pop_size] - npy.amin(function_values[0:pop_size])
+	print "Mod values:",mod_func_values
+
+def calc_rel_weights():
+	global rel_weights,mod_func_values
+	# rel_weights = mod_func_values / mod_func_values.sum()
+	rel_weights[:] = mod_func_values[:] / mod_func_values.sum()
+	print "Weight values:",rel_weights
+
+def calc_neighbour_children():
+	global neighbour_children, population, num_pop_children
+	
+	# for i in range(0,pop_size):
+	# 	rand_num = random.random()
+	# 	pop_children[i,:] = population[i,:] + sigma*rand_num
+
+	# for i in range(0,pop_size):
+	# 	for j in range(0,var_size):
+	# 		rand_num = random.random()
+	# 		pop_children[i,j] = population[i,j] + rand_num*sigma
+	# print num_pop_children
+	num_pop_children = rel_weights * pop_size
+	# print "Number of children:", num_pop_children
+	# print "Sum:", num_pop_children.sum()
+	# print num_pop_children
+	for i in range(0,pop_size):
+		num_pop_children[i] = round(num_pop_children[i])
+
+	# print "Number of children:", num_pop_children
+	# print "Sum:", num_pop_children.sum()
+
+	i=0
+	while (num_pop_children.sum()>20):
+		if (num_pop_children[i]>0):
+			num_pop_children[i]-=1
+		i+=1
+	i=0
+	while (num_pop_children.sum()<20):
+		if (num_pop_children[i]==0):
+			num_pop_children[i]+=1
+		i+=1
+
+	num_pop_children = num_pop_children.astype(int)	
+	child_counter = 0.
+
+	# for i in range(0,pop_size):
+	# 	for j in range(0,num_pop_children[i]):
+	# 		for k in range(0,var_size):
+	# 			rand_num = random.random()
+	# 			neighbour_childre
+	# while (num_pop_children.sum()>20):
+	# 	if (num_pop_children[i]>0):
+	# 		num_pop_children[i]-=1
+	# 	i+=1n[child_counter,k] = rand_num * sigma + population[i,k]
+	# 		child_counter+=1
+
+	for i in range(0,pop_size):
+		for j in range(0,num_pop_children[i]):
+			rand_num = random.random()
+			for k in range(0,var_size):
+				neighbour_children[child_counter,k] = rand_num * sigma + population[i,k]
+			child_counter+=1
+
+def calc_lc_children():
+	global population, lc_children, pop_size
+
+	for i in range(0,pop_size):
+		rand_wt = random.random()
+		rand_ind_1 = random.randrange(0,pop_size)
+		rand_ind_2 = random.randrange(0,pop_size)
+		lc_children[i,:] = rand_wt*population[rand_ind_1,:] + (1-rand_wt)*population[rand_ind_2,:]
+
+def calc_rri_children():
+	global population,rri_children, pop_size
+
+	for i in range(0,pop_size):
+		for j in range(0,var_size):
+			rand_num=random.random()
+			rri_children[i,j]= min_value + rand_num * (max_value-min_value)
+
+def initialize_pop():
+	global population,rri_children,pop_size
+	# calc_rri_children()
+	# population=rri_children
+	for i in range(0,transition_space):
+		for j in range(0,transition_space):
+			population[3*i+j] = trans_mat_unknown[action_index,i,j]
+
+def objective_function(population_instace):
+	lamda = 2
+
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose, previous_pose
+
+	# loss = npy.zeros(shape=(transition_space,transition_space))
+	# alpha = 0.01
+	# lamda = 1.
+	# w = transition_space/2
+	# temp = 0.
+	# for m in range(-w,w+1):
+	# 	for n in range(-w,w+1):
+	# 		# loss[w+m,w+n] = target_belief[previous_pose[0]+m,previous_pose[1]+n] - to_state_belief[previous_pose[0]+m,previous_pose[1]+n]
+	# 		loss[w+m,w+n] = target_belief[previous_pose[0]+m,previous_pose[1]+n] - to_state_belief[current_pose[0]+m,current_pose[1]+n]
+	# 		temp = trans_mat_unknown[action_index,w+m,w+n] + alpha * loss[w+m,w+n]
+	# 		# trans_mat_unknown[action_index,w+m,w+n] += alpha * loss[w+m,w+n]
+	# 		if (temp<=1)and(temp>=0):
+	# 			trans_mat_unknown[action_index,w+m,w+n]=temp					
+	# trans_mat_unknown[action_index] /= trans_mat_unknown[action_index].sum()
+
+	total_loss = 0.
+
+	for m in range(0,discrete_size):	
+		for n in range(0,discrete_size):
+			total_loss+= target_belief[m,n]-to_state_belief[m,n]
+
+	total_loss += lamda * trans_mat_unknown[action_index,:,:].sum()
+	return total_loss
+
+def eval_function_values():
+	# sds
+	global function_values, population, rri_children, neighbour_children, lc_children
+	for i in range(0,pop_size):
+		function_values[i] = objective_function(population[i])
+		function_values[i+pop_size] = objective_function(neighbour_children[i])
+		function_values[i+pop_size*2] = objective_function(rri_children[i])
+		function_values[i+pop_size*3] = objective_function(lc_children[i])
+	
+	
+def update_population():
+	# master_population = npy.reshape(population,(pop_size*4,var_size))
+	global pop_size,population, master_function_values, rri_children, lc_children, neighbour_children
+	master_population = npy.zeros(shape=(pop_size*4,var_size))
+
+	for j in range(0,pop_size):
+		# for k in range(0,pop_size):
+		master_population[j,:]=population[j,:]
+		master_population[pop_size+j,:]=neighbour_children[j,:]
+		master_population[pop_size*2+j,:]=rri_children[j,:]
+		master_population[pop_size*3+j,:]=lc_children[j,:]
+
+	# max_vals = heapq.nlargest(pop_size, master_function_values) 
+	# max_args = heapq.nlargest(pop_size, range(len(function_values)), master_function_values.take)
+	max_args = heapq.nsmallest(pop_size, range(len(function_values)), function_values.take)
+	# max_args = heapq.nsmallest(pop_size, function_values) #, master_function_values.take)
+	print "Functions selected:",max_args
+
+	for i in range(0,pop_size):
+		population[i,:]=master_population[max_args[i],:]
+
+npy.set_printoptions(precision=2)
+
+def stochastic_search():
+	max_iter = 100
+	initialize_pop()
+	print "Initial population:",population
+	eval_function_values()
+	
+	# calc_mod_values()
+
+	for i in range(0,max_iter):
+		print "ITERATION: ",i
+		calc_mod_values()
+		calc_rel_weights()
+		calc_neighbour_children()
+		calc_lc_children()
+		calc_rri_children()
+		eval_function_values()
+		print "Function values:", function_values #function_values[0:pop_size]	
+		update_population()
+
+# stochastic_search()
+# print population
+
+def initialize_state():
+	global current_pose, from_state_belief, previous_pose
+	from_state_belief[:,:]=0.
 	from_state_belief[24,24]=1.
 	# from_state_belief[25,24]=0.8
+
 	current_pose=[24,24]
+	previous_pose = [24,24]
 
 def initialize_transitions():
 	global trans_mat
-	trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
-	trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+	# trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
+	# trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
+
+	trans_mat_1 = npy.array([[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]])
+	trans_mat_2 = npy.array([[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]])
 	
 	#Adding epsilon so that the cummulative distribution has unique values. 
 	epsilon=0.001
@@ -72,9 +279,6 @@ def initialize_transitions():
 
 	trans_mat_1/=trans_mat_1.sum()
 	trans_mat_2/=trans_mat_2.sum()
-
-	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
-	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
 	
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)
@@ -91,8 +295,6 @@ def initialize_transitions():
 	for i in range(0,action_size):
 		trans_mat[i] = npy.fliplr(trans_mat[i])
 		trans_mat[i] = npy.flipud(trans_mat[i])
-
-	
 
 def initialize_unknown_transitions():
 	global trans_mat_unknown
@@ -161,16 +363,16 @@ def display_beliefs():
 	# # 	print target_belief[50-i,:]
 
 	print "From:"
-	for i in range(current_pose[0]-5,current_pose[0]+5):
-		print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
+	# for i in range(current_pose[0]-5,current_pose[0]+5):
+	# 	print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
+	for i in range(previous_pose[0]-5,previous_pose[0]+5):
+		print from_state_belief[i,previous_pose[1]-5:previous_pose[1]+5]
 	print "To:"
 	for i in range(current_pose[0]-5,current_pose[0]+5):
 		print to_state_belief[i,current_pose[1]-5:current_pose[1]+5]
 	print "Target:"
 	for i in range(current_pose[0]-5,current_pose[0]+5):
 		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
-
-
 
 def bayes_obs_fusion():
 	global to_state_belief
@@ -234,7 +436,7 @@ def remap_indices(bucket_index):
 		return 7
 
 def simulated_model(action_index):
-	global trans_mat, from_state_belief
+	global trans_mat, from_state_belief, current_pose
 
 	#### BASED ON THE TRANSITION MODEL CORRESPONDING TO ACTION_INDEX, PROBABILISTICALLY FIND THE NEXT SINGLE STATE.
 	#must find the right bucket
@@ -261,26 +463,27 @@ def simulated_model(action_index):
 		# bucket_index=8
 	# else:
 
-	print "BUCKET SPACE:",bucket_space
-	print "Random:",rand_num
+	# print "BUCKET SPACE:",bucket_space
+	# print "Random:",rand_num
 	
 	for i in range(1,transition_space**2):
 		if (bucket_space[i-1]<=rand_num)and(rand_num<bucket_space[i]):
 			bucket_index=i
-			print "Bucket Index chosen: ",bucket_index
+			# print "Bucket Index chosen: ",bucket_index
 
 	remap_index = remap_indices(bucket_index)
 	# print "Remap Index:",remap_index
-	print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
+	# print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
 
-	if (bucket_index==((transition_space**2)/2)):
-		# print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
-		print "No action."		
-	else:
+	# if (bucket_index==((transition_space**2)/2)):	
+		# print "No action."		
+	# else:
+	if (bucket_index!=((transition_space**2)/2)):
+		previous_pose = current_pose
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
 		
-		print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
+		# print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
 		
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
@@ -304,7 +507,7 @@ def back_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
 
 	loss = npy.zeros(shape=(transition_space,transition_space))
-	alpha = 0.01
+	alpha = 0.1
 
 	lamda = 1.
 
@@ -324,9 +527,7 @@ def back_prop(action_index):
 					loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j]) 
 
 					#*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta
-					
-					
+					# loss[w+ai,w+aj] -= 2*(target_belief[i,j]-to_state_belief[i,j])*(from_state_belief[w+i-ai,w+j-aj]) #+ delta						
 					
 			# trans_mat_unknown[action_index,w+ai,w+aj] += alpha * loss[w+ai,w+aj]
 			trans_mat_unknown[action_index,w+ai,w+aj] -= alpha * loss[w+ai,w+aj]
@@ -335,9 +536,35 @@ def back_prop(action_index):
 			# trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 	trans_mat_unknown[action_index] /=trans_mat_unknown[action_index].sum()
 
+def difference_grad(action_index):
+
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose, previous_pose
+
+	loss = npy.zeros(shape=(transition_space,transition_space))
+	alpha = 0.01
+	lamda = 1.
+	w = transition_space/2
+	temp = 0.
+	for m in range(-w,w+1):
+		for n in range(-w,w+1):
+			# loss[w+m,w+n] = target_belief[previous_pose[0]+m,previous_pose[1]+n] - to_state_belief[previous_pose[0]+m,previous_pose[1]+n]
+			loss[w+m,w+n] = target_belief[previous_pose[0]+m,previous_pose[1]+n] - to_state_belief[current_pose[0]+m,current_pose[1]+n]
+			temp = trans_mat_unknown[action_index,w+m,w+n] + alpha * loss[w+m,w+n]
+			# trans_mat_unknown[action_index,w+m,w+n] += alpha * loss[w+m,w+n]
+			if (temp<=1)and(temp>=0):
+				trans_mat_unknown[action_index,w+m,w+n]=temp				
+
+	trans_mat_unknown[action_index] /= trans_mat_unknown[action_index].sum()
+
 def recurrence():
 	global from_state_belief,target_belief
 	from_state_belief = target_belief
+
+def copy_back(action_index):
+	global trans_mat_unknown, population
+	trans_mat_unknown[action_index,0,:] = population[0:transition_space]
+	trans_mat_unknown[action_index,1,:] = population[transition_space,2*transition_space]
+	trans_mat_unknown[action_index,2,:] = population[2*transition_space,3*transition_space]
 
 def master(action_index):
 
@@ -349,34 +576,29 @@ def master(action_index):
 	# back_prop(action_index)
 	# recurrence()	
 
-
 	###Fiddling with the order: 
-
 	
 	# bayes_obs_fusion()
-	display_beliefs()
-	simulated_model(action_index)	
-	belief_prop(action_index)	
-	back_prop(action_index)
-	recurrence()	
-
-
-
-
+	# display_beliefs()
 	
-	# print "current_pose:",current_pose
-	print "Transition Matrix: ",action_index,"\n"
-	print trans_mat_unknown[action_index,:,:]
-
+	belief_prop(action_index)	
+	# back_prop(action_index)	
+	simulated_model(action_index)	
+	# difference_grad(action_index)
+	# stochastic_search(action_index)
+	stochastic_search()
+	copy_back(action_index)
+	
+	recurrence()	
+	
+	# print "Transition Matrix: ",action_index,"\n"
+	# print trans_mat_unknown[action_index,:,:]
 	# print npy.flipud(npy.fliplr(trans_mat_unknown[action_index,:,:]))
 
 initialize_all()
 
 def input_actions():
-	global action
-	global state_counter
-	global action_index
-	global current_pose
+	global action, state_counter, action_index, current_pose, previous_pose
 
 	# while (action!='q'):		
 	iterate=0
@@ -396,8 +618,10 @@ def input_actions():
 		# 	current_pose[0]=dum_x
 		# 	current_pose[1]=dum_y
 
-		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
+		if ((current_pose[0]>=48)or(current_pose[0]<=1)or(current_pose[1]>=48)or(current_pose[1]<=1)):
+			initialize_state()
 
+		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
 
 		master(action_index)
 
@@ -406,78 +630,3 @@ input_actions()
 print trans_mat_unknown
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-######TO RUN FEEDFORWARD PASSES OF THE RECURRENT CONV NET.#########
-
-def conv_layer():	
-	global value_function
-	global trans_mat
-	action_value_layers = npy.zeros(shape=(action_size,discrete_size,discrete_size))
-	layer_value = npy.zeros(shape=(discrete_size,discrete_size))
-	for act in range(0,action_size):		
-		#Convolve with each transition matrix.
-		action_value_layers[act]=signal.convolve2d(value_function,trans_mat[act],'same','fill',0)
-	
-	#Max pooling over actions. 
-	value_function = gamma*npy.amax(action_value_layers,axis=0)
-	# layer_value = gamma*npy.amax(action_value_layers,axis=0)
-	print "The next value function.",value_function
-	optimal_policy[:,:] = npy.argmax(action_value_layers,axis=0)
-	# return layer_value
-
-def reward_bias():
-	global value_function
-	value_function = value_function + reward_function
-
-def recurrent_value_iteration():
-	global value_function
-	print "Start iterations."
-	t=0	
-	while (t<time_limit):
-		conv_layer()
-		reward_bias()		
-		t+=1
-		print t
-	
-# recurrent_value_iteration()
-
-
-
-
-
-
-######TO SAVE THE POLICY AND VALUE FUNCTION:######
-
-# print "Here's the policy."
-# for i in range(0,discrete_size):
-# 	print optimal_policy[i]
-
-# policy_iteration()
-
-# print "These are the value functions."
-# for t in range(0,time_limit):
-# 	print value_functions[t]
-
-# with file('reward_function.txt','w') as outfile: 
-# 	outfile.write('#Reward Function.\n')
-# 	npy.savetxt(outfile,1000*reward_function,fmt='%-7.2f')
-
-# with file('output_policy.txt','w') as outfile: 
-# 	outfile.write('#Policy.\n')
-# 	npy.savetxt(outfile,optimal_policy,fmt='%-7.2f')
-
-# with file('value_function.txt','w') as outfile: 
-# 	outfile.write('#Value Function.\n')
-# 	npy.savetxt(outfile,1000*value_function,fmt='%-7.2f')

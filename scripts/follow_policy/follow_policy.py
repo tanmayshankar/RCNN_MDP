@@ -52,6 +52,9 @@ value_function = npy.loadtxt(str(sys.argv[3]))/1000
 path_plot = copy.deepcopy(reward_function)
 max_val = npy.amax(path_plot)
 
+max_val_location = npy.unravel_index(npy.argmax(reward_function),reward_function.shape)
+
+
 # action_space = [[0,1],[1,0],[0,-1],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]
 action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 ############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT........
@@ -67,7 +70,8 @@ def follow_policy():
 	current_pose[1] = ay
 	next_pose=copy.deepcopy(current_pose)
 	dummy='y'
-	while (counter<max_path_length)and(dummy=='y'):
+	# while (counter<max_path_length)and(dummy=='y'):
+	while (counter<max_path_length)and(current_pose!=max_val_location):
 
 		path_plot[current_pose[0]][current_pose[1]]=-max_val/3
 
@@ -83,8 +87,8 @@ def follow_policy():
 		current_pose[1] = next_pose[1]		
 		counter+=1
 
-		dummy = raw_input("Continue? ")
-# follow_policy()
+		# dummy = raw_input("Continue? ")
+follow_policy()
 
 # dummy = npy.amax(reward_function)
 # reward_function[3:6,6] = -dummy/4

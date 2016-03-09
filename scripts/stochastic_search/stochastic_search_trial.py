@@ -12,7 +12,7 @@ from scipy import signal
 import copy
 import heapq
 
-var_size = 3
+var_size = 9
 
 decision_variables = npy.zeros(var_size)
 
@@ -127,7 +127,7 @@ def initialize_pop():
 def objective_function(population_instace):
 	lamda = 3
 	# return (population_instace[0]-0.1)**2+(population_instace[1]-0.1)**2+(population_instace[2]-0.1)**2 ##+ lamda*(population_instace.sum())
-	return (population_instace[0]-4)**2+(population_instace[1]-3)**2+(population_instace[2]-2)**2 ##+ lamda*(population_instace.sum())
+	return (population_instace[0]-4)**2+(population_instace[1]-3)**2+(population_instace[2]-2)**2 + (population_instace[0]-4)**2+(population_instace[1]-3)**2+(population_instace[2]-2)**2 + (population_instace[0]-4)**2+(population_instace[1]-3)**2+(population_instace[8]-7)**2##+ lamda*(population_instace.sum()) 
 	# return (population_instace[0]-4)**2+(population_instace[0]-8)**2+(population_instace[1]-3)**2+(population_instace[2]-2)**2 ##+ lamda*(population_instace.sum())
 
 def eval_function_values():

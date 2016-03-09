@@ -32,9 +32,15 @@ reward_function /=1000.0
 cost_function = npy.zeros(shape=(discrete_size,discrete_size))
 
 max_val = npy.amax(reward_function)
-cost_function[20:30,30:45] = -max_val*3
+# cost_function[20:30,30:45] = -max_val*3
 
-reward_function+=cost_function
+for i in range(20,30):#,discrete_size):
+	for j in range(30,45):#discrete_size):
+		cost_function[i,j] = abs(i-35)*abs(j-10)#/max_val
+
+cost_function/=900000
+
+reward_function-=cost_function
 
 time_limit = 100
 

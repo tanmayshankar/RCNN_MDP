@@ -13,6 +13,11 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
+
+# import cProfile
+# cProfile.run('foo()')
+
+
 basis_size = 3
 discrete_size = 50
 
@@ -38,7 +43,7 @@ reward_function = npy.loadtxt(str(sys.argv[1]))
 time_limit = 100
 
 
-
+reward_function -= npy.amax(reward_function)/5
 
 value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
@@ -46,6 +51,7 @@ value_function = npy.zeros(shape=(discrete_size,discrete_size))
 optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
 
 gamma = 0.95
+# gamma = 0.90
 # gamma = 1.
 
 trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
@@ -53,7 +59,8 @@ trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
 def conv_transition_filters():
 	global trans_mat
 	trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
-	trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
+	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
+	trans_mat_2 = [[0.55,0.15,0.],[0.15,0.15,0.],[0.,0.,0.]]
 	
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)
@@ -67,9 +74,10 @@ def conv_transition_filters():
 
 	# trans_mat[:] = npy.fliplr(trans_mat[:])
 	# trans_mat[:] = npy.flipud(trans_mat[:])
-	for i in range(0,action_size):
-		trans_mat[i] = npy.fliplr(trans_mat[i])
-		trans_mat[i] = npy.flipud(trans_mat[i])
+	
+	# for i in range(0,action_size):
+	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
+	# 	trans_mat[i] = npy.flipud(trans_mat[i])
 
 	# trans_mat[1] = trans_mat_1
 	# trans_mat[2] = npy.rot90(trans_mat_1)
