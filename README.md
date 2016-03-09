@@ -4,9 +4,9 @@ This repository is for exploring the connection between Markov Decision Processe
 
 This code base targets 3 problems: 
 
-1. Solving Value Iteration and Policy Iteration in a standard MDP using Feedforward passes of a Recurrent Conv Net. 
-- Estimating the Transition and Observation models in a POMDP/PODRL setting from demonstrations or simulations. 
-- Estimating Reward functions in an Inverse Reinforcement Learning framework. 
+1. Solving Value / Policy Iteration in a standard MDP using Feedforward passes of an RCNN. 
+- Representing the Bayes Filter state belief update as feedforward passes of an RCNN. 
+- Learning the State Transition models and Observation model in a POMDP/PODRL setting from simulations / demonstrations, and reward functions in an Inverse Reinforcement Learning framework. 
 
 Problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. 
 
@@ -18,11 +18,13 @@ Here's an example:
 Once either of the feedforward passes are run, you may display the policy, reward and value functions by running:
 
 Example: 
+
 ./scripts/display/display_policy.py output_policy.txt reward_function.txt value_function.txt
 
-Currently, you may observe the outputs of learning the transition probabilities by running either of the following codes: 
+Currently, you may observe the outputs of learning the transition probabilities by running any of the following codes:
 
-1. ./scripts/auto_script/difference_loss.py
+1. ./scripts/window_loss/anneal_window_lsq.py
+./scripts/auto_script/difference_loss.py
 - ./scripts/auto_script/least_square_loss.py
 
 
