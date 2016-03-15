@@ -19,7 +19,7 @@ discrete_size = 50
 
 #Action size also determines number of convolutional filters. 
 action_size = 8
-action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
+action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
 ## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
 #Transition space size determines size of convolutional filters. 
@@ -63,13 +63,16 @@ from_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
 #### DEFINING OBSERVATION RELATED VARIABLES
 observation_model = npy.zeros(shape=(obs_space,obs_space))
 obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
-observed_state = npy.array([0,0])
+observed_state = npy.zeros(2)
 
 state_counter = 0
 action = 'w'
 
 learning_rate = 0.05
 annealing_rate = (learning_rate/5)/time_limit
+learning_rate_obs = 0.01
+annealing_rate_obs = (learning_rate/5)/time_limit
+
 norm_sum_bel=0.
 
 
@@ -133,10 +136,11 @@ def initialize_unknown_observation():
 
 def initialize_observation():
 	global observation_model
-	observation_model = npy.array([[0.01,0.08,0.01],[0.08,0.64,0.08],[0.01,0.08,0.01]])
+	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
+	# observation_model = npy.array([[0.,0.,0.],[0.,1.,0.],[0.,0.,0.]])
 	# print observation_model
 
-	epsilon=0.001
+	epsilon=0.0001
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
 
@@ -184,26 +188,26 @@ def bayes_obs_fusion():
 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 	norm_sum_bel = dummy.sum()
 
-def remap_indices(bucket_index):
+def remap_indices(dummy_index):
 
 	#####action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 	#####UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
-	if (bucket_index==0):
+	if (dummy_index==0):
 		return 4
-	elif (bucket_index==1):
+	if (dummy_index==1):
 		return 0
-	elif (bucket_index==2):
+	if (dummy_index==2):
 		return 5
-	elif (bucket_index==3):
+	if (dummy_index==3):
 		return 2	
-	elif (bucket_index==5):
+	if (dummy_index==5):
 		return 3
-	elif (bucket_index==6):
+	if (dummy_index==6):
 		return 6
-	elif (bucket_index==7):
+	if (dummy_index==7):
 		return 1
-	elif (bucket_index==8):
+	if (dummy_index==8):
 		return 7
 
 def initialize_model_bucket():
@@ -221,11 +225,13 @@ def initialize_model_bucket():
 				bucket_space[k,transition_space*i+j] = cummulative[k]
 
 def initialize_obs_model_bucket():
-	global obs_bucket_space, observation_model,obs_space, obs_cummulative
+	global obs_bucket_space, observation_model, obs_space, obs_cummulative
 	for i in range(0,obs_space):
 		for j in range(0,obs_space):
 			obs_cummulative += observation_model[i,j]
 			obs_bucket_space[obs_space*i+j] = obs_cummulative
+
+	print obs_bucket_space
 
 def initialize_all():
 	initialize_state()
@@ -293,10 +299,10 @@ def simulated_model(action_index):
 		
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
-	
+	 
 def simulated_observation_model():
 	global observation_model, obs_bucket_space, obs_bucket_index, observed_state, current_pose
-
+	remap_index = 0
 	rand_num = random.random()
 	if (rand_num<obs_bucket_space[0]):
 		obs_bucket_index=0
@@ -304,14 +310,19 @@ def simulated_observation_model():
 	for i in range(1,obs_space**2):
 		if (obs_bucket_space[i-1]<=rand_num)and(rand_num<obs_bucket_space[i]):
 			obs_bucket_index=i
-
-	remap_index = remap_indices(bucket_index)
-
+	
+	obs_bucket_index = int(obs_bucket_index)
+	
 	observed_state = copy.deepcopy(current_pose)
+	if (obs_bucket_index!=((obs_space**2)/2)):
+		remap_index = remap_indices(obs_bucket_index)
+		# observed_state[0] = current_pose[0]+ action_space[remap_index,0]
+		# observed_state[1] = current_pose[1]+ action_space[remap_index,1]
 
-	if (bucket_index!=((transition_space**2)/2)):
-		observed_state[0] += action_space[remap_index][0]
-		observed_state[1] += action_space[remap_index][1]
+		observed_state[0] += action_space[remap_index,0]
+		observed_state[1] += action_space[remap_index,1]
+
+	# print "Observed State: ", observed_state
 
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
@@ -322,7 +333,7 @@ def belief_prop(action_index):
 	# from_state_belief = to_state_belief
 
 def back_prop_trans(action_index,time_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state,corr_to_state_belief
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state, corr_to_state_belief
 
 	# loss = npy.zeros(shape=(transition_space,transition_space))
 	alpha = learning_rate - annealing_rate * time_index
@@ -330,14 +341,23 @@ def back_prop_trans(action_index,time_index):
 	lamda = 1.
 
 	w = transition_space/2
+	x = copy.deepcopy(observed_state[0])
+	y = copy.deepcopy(observed_state[1])
 
 	for m in range(-w,w+1):
 		for n in range(-w,w+1):
 			loss_1=0.
 			for i in range(0,discrete_size):
 				for j in range(0,discrete_size):
-					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size)and(i-observed_state[0]<obs_space)and(j-observed_state[1]<obs_space)and(j-observed_state[1]>=0)and(i-observed_state[0]>=0):
-						loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*observation_model[i-observed_state[0],j-observed_state[1]] * from_state_belief[i-m,j-n] 
+					# if (((i-m)>=0)and((i-m)<discrete_size)and((j-n)>=0)and((j-n)<discrete_size)and((i-observed_state[0])<obs_space)and((j-observed_state[1])<obs_space)and((j-observed_state[1])>=0)and((i-observed_state[0])>=0)):
+
+					# if (i-x>=0):
+					# 	print "h"
+
+					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
+						if (i-x>=0)and(j-y>=0)and(j-y<obs_space)and(i-x<obs_space):
+
+							loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*observation_model[i-observed_state[0],j-observed_state[1]] * from_state_belief[i-m,j-n] 
 			
 			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
 			# if (temp>=0)and(temp<=1):
@@ -347,17 +367,16 @@ def back_prop_trans(action_index,time_index):
 	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
 def back_prop_obs(action_index,time_index):
 	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief, corr_to_state_belief, norm_sum_bel
-	alpha = learning_rate - annealing_rate * time_index
+	alpha = learning_rate_obs - annealing_rate_obs * time_index
 
 	h = obs_space/2
 
 	for m in range(-h,h+1):
 		for n in range(-h,h+1):
 			loss_1 =0.
-			for i in range(0,discrete_size):
-				for j in range(0,discrete_size):
-					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
-						loss_1 = - 2 * (target_belief[i,j]-corr_to_state_belief[i,j]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
+
+			if (observed_state[0]+m>=0)and(observed_state[0]+m<obs_space)and(observed_state[1]+n<obs_space)and(observed_state[1]+n>=0):
+				loss_1 = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
 
 			if (obs_model_unknown[h+m,h+n]-alpha*loss_1>=0)and(obs_model_unknown[h+m,h+n]-alpha*loss_1<1):
 				obs_model_unknown[h+m,h+n] -=alpha * loss_1
@@ -379,7 +398,8 @@ def master(action_index, time_index):
 	simulated_model(action_index)
 	simulated_observation_model()
 
-	back_prop(action_index, time_index)
+	back_prop_trans(action_index, time_index)
+	back_prop_obs(action_index, time_index)
 	recurrence()	
 
 initialize_all()
@@ -393,7 +413,7 @@ def input_actions():
 		iterate+=1
 		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
+		print "Iteration:",iterate," Current pose:",current_pose,"Obersved State",observed_state," Action:",action_index
 		master(action_index, iterate)
 
 input_actions()
@@ -413,13 +433,11 @@ print trans_mat_unknown
 # 	print trans_mat_unknown[i].sum()
 
 	
-trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
-print "Normalized:\n",trans_mat_unknown	
-
-
+# trans_mat_unknown[:,:,:] /=trans_mat_unknown[:,:,:].sum()
+# print "Normalized:\n",trans_mat_unknown	
 print "Actual transition matrix:" , trans_mat
 
-
+print "Learnt Observation Model:", obs_model_unknown
 
 
 
