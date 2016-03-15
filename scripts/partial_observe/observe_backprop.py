@@ -25,7 +25,7 @@ action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
 obs_space = 3
-time_limit = 500
+time_limit = 5000
 
 bucket_space = npy.zeros((action_size,transition_space**2))
 cummulative = npy.zeros(action_size)
@@ -245,7 +245,7 @@ def initialize_all():
 def construct_from_ext_state():
 	global from_state_ext, from_state_belief,discrete_size
 	d=discrete_size
-	from_state_ext[w:d+w,w:d+w] = from_state_belief[:,:]
+	from_state_ext[w:d+w,w:d+w] = copy.deepcopy(from_state_belief[:,:])
 	# from_state_ext[2*w:d+2*w,2*w:d+2*w] = from_state_belief[:,:]
 
 def belief_prop_extended(action_index):
@@ -263,7 +263,7 @@ def belief_prop_extended(action_index):
 		to_state_ext[:,d+2*w-i-2]+= to_state_ext[:,d+2*w-i-1]
 		to_state_ext[:,d+2*w-i-1]=0
 
-	to_state_belief[:,:] = to_state_ext[w:d+w,w:d+w]
+	to_state_belief[:,:] = copy.deepcopy(to_state_ext[w:d+w,w:d+w])
 
 def simulated_model(action_index):
 	global trans_mat, from_state_belief, bucket_space, bucket_index, cummulative
@@ -279,29 +279,19 @@ def simulated_model(action_index):
 	for i in range(1,transition_space**2):
 		if (bucket_space[action_index,i-1]<=rand_num)and(rand_num<bucket_space[action_index,i]):
 			bucket_index=i
-			# print "Bucket Index chosen: ",bucket_index
 
 	remap_index = remap_indices(bucket_index)
-	# print "Remap Index:",remap_index
-	# print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
-
-	# if (bucket_index==((transition_space**2)/2)):
-		# print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
-		# print "No action."		
-	# else:
-
-	# if ((current_pose[0]<49)and(current_pose[1]<49)and(current_pose[0]<49)
+	
 	if (bucket_index!=((transition_space**2)/2)):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
-		
-		# print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
-		
+				
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
 	 
 def simulated_observation_model():
 	global observation_model, obs_bucket_space, obs_bucket_index, observed_state, current_pose
+	
 	remap_index = 0
 	rand_num = random.random()
 	if (rand_num<obs_bucket_space[0]):
@@ -312,13 +302,10 @@ def simulated_observation_model():
 			obs_bucket_index=i
 	
 	obs_bucket_index = int(obs_bucket_index)
-	
 	observed_state = copy.deepcopy(current_pose)
+
 	if (obs_bucket_index!=((obs_space**2)/2)):
 		remap_index = remap_indices(obs_bucket_index)
-		# observed_state[0] = current_pose[0]+ action_space[remap_index,0]
-		# observed_state[1] = current_pose[1]+ action_space[remap_index,1]
-
 		observed_state[0] += action_space[remap_index,0]
 		observed_state[1] += action_space[remap_index,1]
 
@@ -350,10 +337,6 @@ def back_prop_trans(action_index,time_index):
 			for i in range(0,discrete_size):
 				for j in range(0,discrete_size):
 					# if (((i-m)>=0)and((i-m)<discrete_size)and((j-n)>=0)and((j-n)<discrete_size)and((i-observed_state[0])<obs_space)and((j-observed_state[1])<obs_space)and((j-observed_state[1])>=0)and((i-observed_state[0])>=0)):
-
-					# if (i-x>=0):
-					# 	print "h"
-
 					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
 						if (i-x>=0)and(j-y>=0)and(j-y<obs_space)and(i-x<obs_space):
 
@@ -413,7 +396,7 @@ def input_actions():
 		iterate+=1
 		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		print "Iteration:",iterate," Current pose:",current_pose,"Obersved State",observed_state," Action:",action_index
+		print "Iteration:",iterate," Current pose:",current_pose," Observed State:",observed_state," Action:",action_index
 		master(action_index, iterate)
 
 input_actions()
