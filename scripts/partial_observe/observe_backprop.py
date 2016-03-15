@@ -186,17 +186,14 @@ def display_beliefs():
 		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
 
 def bayes_obs_fusion():
-	global to_state_belief
-	global current_pose
-	global observation_model
-	global obs_space
+	global to_state_belief, current_pose, observation_model, obs_space, observed_state
 	
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
 
-	for i in range(0,obs_space):
-		for j in range(0,obs_space):
-			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
-	
+	for i in range(-obs_space/2,obs_space/2+1):
+		for j in range(-obs_space/2,obs_space/2+1):
+			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[obs_space/2+i,obs_space/2+j]
+
 	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calculate_target(action_index):
@@ -397,7 +394,11 @@ def master(action_index, time_index):
 	# belief_prop(action_index)
 	construct_from_ext_state()
 	belief_prop_extended(action_index)
+	bayes_obs_fusion()
+
 	simulated_model(action_index)
+	simulated_observation_model()
+
 	back_prop(action_index, time_index)
 	recurrence()	
 
