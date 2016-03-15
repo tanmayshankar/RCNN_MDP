@@ -54,7 +54,7 @@ trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_spa
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 target_belief = npy.zeros(shape=(discrete_size,discrete_size))
-
+corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
 #### DEFINING EXTENDED STATE BELIEFS 
 w = transition_space/2
 to_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
@@ -70,6 +70,7 @@ action = 'w'
 
 learning_rate = 0.05
 annealing_rate = (learning_rate/5)/time_limit
+norm_sum_bel=0.
 
 
 def initialize_state():
@@ -133,28 +134,11 @@ def initialize_unknown_observation():
 def initialize_observation():
 	global observation_model
 	observation_model = npy.array([[0.01,0.08,0.01],[0.08,0.64,0.08],[0.01,0.08,0.01]])
-	print observation_model
+	# print observation_model
 
-def fuse_observations():
-	# global from_state_belief
-	# global current_pose
-	# global observation_model
-	
-	global from_state_belief, current_pose, observation_model
-
-	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
-	# l = obs_space/2
-	# for i in range(-l,l+1):
-	# 	for j in range(-l,l+1):
-	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
-
-	for i in range(0,obs_space):
-		for j in range(0,obs_space):
-			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
-
-	# print "Dummy.",dummy
-	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+	epsilon=0.001
+	observation_model += epsilon
+	observation_model /= observation_model.sum()
 
 def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief,current_pose
@@ -186,40 +170,19 @@ def display_beliefs():
 		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
 
 def bayes_obs_fusion():
-	global to_state_belief, current_pose, observation_model, obs_space, observed_state
+	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
 	
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
 
 	for i in range(-obs_space/2,obs_space/2+1):
 		for j in range(-obs_space/2,obs_space/2+1):
-			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[obs_space/2+i,obs_space/2+j]
 
-	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[obs_space/2+i,obs_space/2+j]
+			##MUST INVOKE THE UNKNOWN OBVS
+			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[obs_space/2+i,obs_space/2+j]
 
-def calculate_target(action_index):
-	# global trans_mat_unknown
-	# global to_state_belief
-	# global from_state_belief
-	global target_belief
-
-	#TARGET TYPE 1 
-	# target_belief[:,:]=0.
-	# target_belief[to_state[0],to_state[1]]=1.
-
-	#TARGET TYPE 2: actual_T * from_belief
-	# target_belief = from_state_belief
-	target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
-	
-	#TARGET TYPE 3: 
-	# target_belief = from_state_belief
-	# target_belief = signal.convolve2d(from_state_belief,trans_mat[action_index],'same','fill',0)
-	#Fuse with Observations
-
-	#TARGET TYPE 4: 
-	
-
-	# if (target_belief.sum()<1.):
-	# 	target_belief /= target_belief.sum()
+	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+	norm_sum_bel = dummy.sum()
 
 def remap_indices(bucket_index):
 
@@ -358,10 +321,10 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
-def back_prop(action_index,time_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief	
+def back_prop_trans(action_index,time_index):
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state,corr_to_state_belief
 
-	loss = npy.zeros(shape=(transition_space,transition_space))
+	# loss = npy.zeros(shape=(transition_space,transition_space))
 	alpha = learning_rate - annealing_rate * time_index
 	# alpha = learning_rate
 	lamda = 1.
@@ -373,8 +336,8 @@ def back_prop(action_index,time_index):
 			loss_1=0.
 			for i in range(0,discrete_size):
 				for j in range(0,discrete_size):
-					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
-						loss_1 -= 2*(target_belief[i,j]-to_state_belief[i,j])*from_state_belief[i-m,j-n]
+					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size)and(i-observed_state[0]<obs_space)and(j-observed_state[1]<obs_space)and(j-observed_state[1]>=0)and(i-observed_state[0]>=0):
+						loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*observation_model[i-observed_state[0],j-observed_state[1]] * from_state_belief[i-m,j-n] 
 			
 			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
 			# if (temp>=0)and(temp<=1):
@@ -382,6 +345,23 @@ def back_prop(action_index,time_index):
 				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
 
 	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
+def back_prop_obs(action_index,time_index):
+	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief, corr_to_state_belief, norm_sum_bel
+	alpha = learning_rate - annealing_rate * time_index
+
+	h = obs_space/2
+
+	for m in range(-h,h+1):
+		for n in range(-h,h+1):
+			loss_1 =0.
+			for i in range(0,discrete_size):
+				for j in range(0,discrete_size):
+					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
+						loss_1 = - 2 * (target_belief[i,j]-corr_to_state_belief[i,j]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
+
+			if (obs_model_unknown[h+m,h+n]-alpha*loss_1>=0)and(obs_model_unknown[h+m,h+n]-alpha*loss_1<1):
+				obs_model_unknown[h+m,h+n] -=alpha * loss_1
+
 
 def recurrence():
 	global from_state_belief,target_belief
