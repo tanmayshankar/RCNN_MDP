@@ -25,7 +25,8 @@ action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
 obs_space = 3
-time_limit = 5000
+h=obs_space/2
+time_limit = 1000
 
 bucket_space = npy.zeros((action_size,transition_space**2))
 cummulative = npy.zeros(action_size)
@@ -177,14 +178,13 @@ def bayes_obs_fusion():
 	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
 	
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
-	for i in range(-obs_space/2,obs_space/2+1):
-		for j in range(-obs_space/2,obs_space/2+1):
-
+	h = obs_space/2
+	for i in range(-h,h+1):
+		for j in range(-h,h+1):
 			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[obs_space/2+i,obs_space/2+j]
 			##MUST INVOKE THE UNKNOWN OBVS
-			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[obs_space/2+i,obs_space/2+j]
-
+			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[obs_space/2+i,obs_space/2+j]
+			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[h+i,h+j]
 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 	norm_sum_bel = dummy.sum()
 
@@ -338,9 +338,9 @@ def back_prop_trans(action_index,time_index):
 				for j in range(0,discrete_size):
 					# if (((i-m)>=0)and((i-m)<discrete_size)and((j-n)>=0)and((j-n)<discrete_size)and((i-observed_state[0])<obs_space)and((j-observed_state[1])<obs_space)and((j-observed_state[1])>=0)and((i-observed_state[0])>=0)):
 					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
-						if (i-x>=0)and(j-y>=0)and(j-y<obs_space)and(i-x<obs_space):
+						if (h+i-x>=0)and(h+j-y>=0)and(h+j-y<obs_space)and(h+i-x<obs_space):
 
-							loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*observation_model[i-observed_state[0],j-observed_state[1]] * from_state_belief[i-m,j-n] 
+							loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
 			
 			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
 			# if (temp>=0)and(temp<=1):
@@ -418,28 +418,9 @@ print trans_mat_unknown
 	
 # trans_mat_unknown[:,:,:] /=trans_mat_unknown[:,:,:].sum()
 # print "Normalized:\n",trans_mat_unknown	
-print "Actual transition matrix:" , trans_mat
+print "Actual transition matrix:\n" , trans_mat
 
-print "Learnt Observation Model:", obs_model_unknown
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+print "Learnt Observation Model:\n", obs_model_unknown
 
 
 
@@ -476,27 +457,6 @@ def recurrent_value_iteration():
 		t+=1
 		print t
 	
-# recurrent_value_iteration()
-
-
-
-
-
-
-######TO SAVE THE POLICY AND VALUE FUNCTION:######
-
-# print "Here's the policy."
-# for i in range(0,discrete_size):
-# 	print optimal_policy[i]
-
-# policy_iteration()
-
-# print "These are the value functions."
-# for t in range(0,time_limit):
-# 	print value_functions[t]
-
-
-
 with file('actual_transition.txt','w') as outfile: 
 	for data_slice in trans_mat:
 		outfile.write('#Transition Function.\n')
@@ -506,11 +466,3 @@ with file('estimated_transition.txt','w') as outfile:
 	for data_slice in trans_mat_unknown:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
-
-# with file('output_policy.txt','w') as outfile: 
-# 	outfile.write('#Policy.\n')
-# 	npy.savetxt(outfile,optimal_policy,fmt='%-7.2f')
-
-# with file('value_function.txt','w') as outfile: 
-# 	outfile.write('#Value Function.\n')
-# 	npy.savetxt(outfile,1000*value_function,fmt='%-7.2f')
