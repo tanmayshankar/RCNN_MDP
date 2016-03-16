@@ -137,7 +137,7 @@ def initialize_unknown_observation():
 
 def initialize_observation():
 	global observation_model
-	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
+	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
 	# observation_model = npy.array([[0.,0.,0.],[0.,1.,0.],[0.,0.,0.]])
 	# print observation_model
 
@@ -351,19 +351,25 @@ def back_prop_trans(action_index,time_index):
 def back_prop_obs(action_index,time_index):
 	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief, corr_to_state_belief, norm_sum_bel
 	alpha = learning_rate_obs - annealing_rate_obs * time_index
-
 	h = obs_space/2
 
 	for m in range(-h,h+1):
 		for n in range(-h,h+1):
 			loss_1 =0.
+			# if (observed_state[0]+m>=0):
+			# 	print "A. "
+			# if (observed_state[0]+m<discrete_size):
+			# 	print "B. "
+			# if (observed_state[1]+n<discrete_size):
+			# 	print "C. "
+			# if (observed_state[1]+n>=0):
+			# 	print "D. "
 
-			if (observed_state[0]+m>=0)and(observed_state[0]+m<obs_space)and(observed_state[1]+n<obs_space)and(observed_state[1]+n>=0):
+			if (observed_state[0]+m>=0)and(observed_state[0]+m<discrete_size)and(observed_state[1]+n<discrete_size)and(observed_state[1]+n>=0):
 				loss_1 = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
 
 			if (obs_model_unknown[h+m,h+n]-alpha*loss_1>=0)and(obs_model_unknown[h+m,h+n]-alpha*loss_1<1):
-				obs_model_unknown[h+m,h+n] -=alpha * loss_1
-
+				obs_model_unknown[h+m,h+n] -= alpha * loss_1
 
 def recurrence():
 	global from_state_belief,target_belief
@@ -409,8 +415,7 @@ def flip_trans_again():
 
 flip_trans_again()
 
-print "Transition Matrix: "
-print trans_mat_unknown
+print "Transition Matrix:\n", trans_mat_unknown
 
 # for i in range(0,8):
 # 	print trans_mat_unknown[i].sum()
