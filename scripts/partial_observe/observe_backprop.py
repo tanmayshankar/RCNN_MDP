@@ -415,20 +415,20 @@ def flip_trans_again():
 
 flip_trans_again()
 
-print "Transition Matrix:\n", trans_mat_unknown
+print "Learnt Transition Model:\n", trans_mat_unknown
 
 # for i in range(0,8):
 # 	print trans_mat_unknown[i].sum()
 
-	
-trans_mat_unknown[:,:,:] /=trans_mat_unknown[:,:,:].sum()
-print "Normalized:\n",trans_mat_unknown	
+for i in range(0,8):
+trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
+print "Normalized Transition Model:\n",trans_mat_unknown	
 
-print "Actual transition matrix:\n" , trans_mat
+print "Actual Transition Model:\n" , trans_mat
 
 print "Learnt Observation Model:\n", obs_model_unknown
 obs_model_unknown/=obs_model_unknown.sum()
-print "Learnt Observation Model:\n", obs_model_unknown
+print "Normalized Observation Model:\n", obs_model_unknown
 
 
 
@@ -474,3 +474,13 @@ with file('estimated_transition.txt','w') as outfile:
 	for data_slice in trans_mat_unknown:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+
+with file('estimated_observation.txt','w') as outfile: 
+	# for data_slice in trans_mat_unknown:
+	outfile.write('#Observation Model.\n')
+	npy.savetxt(outfile,obs_model_unknown,fmt='%-7.2f')
+
+with file('actual_observation.txt','w') as outfile: 
+	# for data_slice in trans_mat_unknown:
+	outfile.write('#Observation Model.\n')
+	npy.savetxt(outfile,observation_model,fmt='%-7.2f')
