@@ -426,6 +426,8 @@ print "Transition Matrix:\n", trans_mat_unknown
 print "Actual transition matrix:\n" , trans_mat
 
 print "Learnt Observation Model:\n", obs_model_unknown
+obs_model_unknown/=obs_model_unknown.sum()
+print "Learnt Observation Model:\n", obs_model_unknown
 
 
 
