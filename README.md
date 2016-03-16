@@ -19,7 +19,7 @@ If you'd like to run it with a different transition function of your choice:
 
 `./scripts/feedforward_rcnn/variable_transition_size.py data/trial_3/reward_function.txt`
 
-**Displaying the optimal Policy**
+**Displaying Optimal Policy**
 
 Once either of the feedforward passes are run, you may display the policy, reward and value functions by running the following:
 
@@ -35,8 +35,14 @@ To replan (execute value iteration) with the learnt transition model, run:
 
 `./scripts/feedforward_rcnn/learnt_trans_feedforward.py reward_function.txt estimated_transition.txt`
 
-**Following the optimal Policy**
+**Learning Transition Model and Observation Model**
+To learn the transition and observation models of the agent in a Partially Observable setting, run the following code: 
+
+`./scripts/partial_observe/observe_backprop.py`
+
+**Following Optimal Policy**
 
 To watch an agent follow the optimal policy from a random position, with the learnt transition values, run: 
 
 `./scripts/follow_policy/follow_policy_trans.py output_policy.txt reward_function.txt value_function.txt estimated_transition.txt`
+
