@@ -421,8 +421,9 @@ print "Transition Matrix:\n", trans_mat_unknown
 # 	print trans_mat_unknown[i].sum()
 
 	
-# trans_mat_unknown[:,:,:] /=trans_mat_unknown[:,:,:].sum()
-# print "Normalized:\n",trans_mat_unknown	
+trans_mat_unknown[:,:,:] /=trans_mat_unknown[:,:,:].sum()
+print "Normalized:\n",trans_mat_unknown	
+
 print "Actual transition matrix:\n" , trans_mat
 
 print "Learnt Observation Model:\n", obs_model_unknown
