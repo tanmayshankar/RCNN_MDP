@@ -69,11 +69,12 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
+batch_size = 20
 learning_rate = 0.05
 annealing_rate = (learning_rate/5)/(time_limit/batch_size)
 learning_rate_obs = 0.01
 annealing_rate_obs = (learning_rate/5)/(time_limit/batch_size)
-batch_size = 20
+
 
 norm_sum_bel=0.
 
@@ -351,8 +352,6 @@ def back_prop_trans(action_index,time_index):
 def back_prop_obs(action_index,time_index):
 	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief, corr_to_state_belief, norm_sum_bel
 	
-	# alpha = learning_rate_obs - annealing_rate_obs * time_index
-
 	alpha = learning_rate_obs - annealing_rate_obs * (time_index/batch_size)
 
 	h = obs_space/2
@@ -360,14 +359,6 @@ def back_prop_obs(action_index,time_index):
 	for m in range(-h,h+1):
 		for n in range(-h,h+1):
 			loss_1 =0.
-			# if (observed_state[0]+m>=0):
-			# 	print "A. "
-			# if (observed_state[0]+m<discrete_size):
-			# 	print "B. "
-			# if (observed_state[1]+n<discrete_size):
-			# 	print "C. "
-			# if (observed_state[1]+n>=0):
-			# 	print "D. "
 
 			if (observed_state[0]+m>=0)and(observed_state[0]+m<discrete_size)and(observed_state[1]+n<discrete_size)and(observed_state[1]+n>=0):
 				loss_1 = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
