@@ -11,9 +11,7 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
-
 ###### DEFINITIONS
-
 basis_size = 3
 discrete_size = 50
 
@@ -76,7 +74,6 @@ annealing_rate_obs = (learning_rate/5)/time_limit
 
 norm_sum_bel=0.
 
-
 #### Take required inputs. 
 trans_mat = npy.loadtxt(str(sys.argv[1]))
 trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
@@ -85,8 +82,11 @@ trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
 # q_value_layers = npy.loadtxt(str(sys.argv[2]))
 # q_value_layers = q_value_layers.reshape((action_size,discrete_size,discrete_size))
 
-q_value_layers = npy.ones((action_size,discrete_size,discrete_size))
-q_value_layers /= q_value_layers.sum()
+q_value_estimate = npy.ones((action_size,discrete_size,discrete_size))
+# q_value_layers /= q_value_layers.sum()
+
+qmdp_values = npy.zeros(action_size)
+qmdp_values_softmax = npy.zeros(action_size)
 
 def initialize_state():
 	global current_pose, from_state_belief
@@ -381,17 +381,34 @@ def feedforward_recurrence():
 	global from_state_belief, to_state_belief
 	from_state_belief = copy.deepcopy(to_state_belief)
 
-def softmax():
+def calc_softmax():
 	global qmdp_values, qmdp_values_softmax
 
 	for act in range(0,action_size):
-		qmdp_values_smax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
+		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
 
-def QMDP_values():
-	global to_state_belief, q_value_layers, qmdp_values
+def update_QMDP_values():
+	global to_state_belief, q_value_estimate, qmdp_values
 
 	for act in range(0,action_size):
-		qmdp_values[act] = npy.sum(q_value_layers[act]*to_state_belief)
+		qmdp_values[act] = npy.sum(q_value_estimate[act]*to_state_belief)
+
+def IRL_backprop(action_index):
+	global to_state_belief, q_value_estimate, qmdp_values_softmax
+
+	update_QMDP_values()
+	softmax()
+
+	target_q_values = npy.zeros(action_size)
+	target_q_values[action_index] = 1.
+
+	
+
+
+# def mini_master(action_index):
+# 	QMDP_values()
+# 	softmax()
+
 
 def master(action_index, time_index):
 
