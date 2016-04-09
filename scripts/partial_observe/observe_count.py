@@ -26,7 +26,7 @@ action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 transition_space = 3
 obs_space = 3
 h=obs_space/2
-time_limit = 500
+time_limit = 1000
 
 bucket_space = npy.zeros((action_size,transition_space**2))
 cummulative = npy.zeros(action_size)
@@ -319,13 +319,18 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
+def trans_count(action_index, time_index):
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state, corr_to_state_belief
+	
+			
+
 def back_prop_trans(action_index,time_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state, corr_to_state_belief
 
 	# loss = npy.zeros(shape=(transition_space,transition_space))
 	alpha = learning_rate - annealing_rate * time_index
 	# alpha = learning_rate
-	lamda = 1.
+	lamda = 5.
 
 	w = transition_space/2
 	x = copy.deepcopy(observed_state[0])
@@ -342,6 +347,7 @@ def back_prop_trans(action_index,time_index):
 
 							loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
 			
+			loss_1 += lamda * (trans_mat_unknown[action_index,:,:].sum() - 1.)
 			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
 			# if (temp>=0)and(temp<=1):
 			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
@@ -353,6 +359,7 @@ def back_prop_obs(action_index,time_index):
 	alpha = learning_rate_obs - annealing_rate_obs * time_index
 	h = obs_space/2
 
+	mu = 5.
 	for m in range(-h,h+1):
 		for n in range(-h,h+1):
 			loss_1 =0.
@@ -367,6 +374,8 @@ def back_prop_obs(action_index,time_index):
 
 			if (observed_state[0]+m>=0)and(observed_state[0]+m<discrete_size)and(observed_state[1]+n<discrete_size)and(observed_state[1]+n>=0):
 				loss_1 = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
+
+			loss_1 += mu * (obs_model_unknown.sum() - 1.)
 
 			if (obs_model_unknown[h+m,h+n]-alpha*loss_1>=0)and(obs_model_unknown[h+m,h+n]-alpha*loss_1<1):
 				obs_model_unknown[h+m,h+n] -= alpha * loss_1
