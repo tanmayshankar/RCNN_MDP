@@ -85,7 +85,7 @@ for i in range(0,discrete_size):
 # print U,V
 
 fig, ax = plt.subplots()
-im = ax.imshow(reward_function, origin='lower',extent=[0,49,0,49])
+im = ax.imshow(reward_function, origin='lower',extent=[-1,50,-1,50])
 # im = ax.imshow(value_function, origin='lower',extent=[0,50,0,50])
 ax.quiver(V,U)
 # ax.quiver(U,V)
