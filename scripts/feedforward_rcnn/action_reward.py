@@ -18,8 +18,12 @@ discrete_size = 50
 
 #Action size also determines number of convolutional filters. 
 action_size = 8
-action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
-############# UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT ##################
+
+##THE ORIGINAL ACTION SPACE:
+action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
+##THE MODIFIED ACTION SPACE:
+# action_space = npy.array([[1,0],[-1,0],[0,-1],[0,1],[1,-1],[1,1],[-1,-1],[-1,1]])
+################# UP,  DOWN,  LEFT, RIGHT,UPLEFT,UPRIGHT,DOWNLEFT,DOWNRIGHT ##################
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
@@ -37,7 +41,6 @@ action_factor_reward = 0.1
 
 value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
-
 optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
 
 # gamma = 0.95
@@ -135,6 +138,13 @@ print "Here's the policy."
 for i in range(0,discrete_size):
 	print optimal_policy[i]
 
+##THE ORIGINAL ACTION SPACE:
+action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
+##THE MODIFIED ACTION SPACE:
+# action_space = [[1,0],[-1,0],[0,-1],[0,1],[1,-1],[1,1],[-1,-1],[-1,1]]
+################# UP,  DOWN,  LEFT, RIGHT,UPLEFT,UPRIGHT,DOWNLEFT,DOWNRIGHT ##################
+
+## FOR ORIGINAL:
 optimal_policy[0,:] = 1
 optimal_policy[49,:] = 0
 optimal_policy[:,0] = 3
@@ -143,6 +153,20 @@ optimal_policy[0,0] = 7
 optimal_policy[0,49] = 6
 optimal_policy[49,0] = 5
 optimal_policy[49,49] = 4
+
+## FOR MODIFIED:
+# optimal_policy[0,:] = 0
+# # optimal_policy[10,:] = 7
+# optimal_policy[49,:] = 1
+# optimal_policy[:,0] = 3
+# optimal_policy[:,49] = 2
+# optimal_policy[0,0] = 5
+# optimal_policy[0,49] = 4
+# optimal_policy[49,0] = 7
+# optimal_policy[49,49] = 6
+
+dummy_policy = copy.deepcopy(optimal_policy)
+dummy_policy[1:49,1:49] = 7
 
 with file('reward_function.txt','w') as outfile: 
 	outfile.write('#Reward Function.\n')
@@ -156,6 +180,11 @@ with file('action_reward_function.txt','w') as outfile:
 with file('output_policy.txt','w') as outfile: 
 	outfile.write('#Policy.\n')
 	npy.savetxt(outfile,optimal_policy,fmt='%-7.2f')
+
+with file('dummy_policy.txt','w') as outfile: 
+	outfile.write('#Policy.\n')
+	npy.savetxt(outfile,dummy_policy,fmt='%-7.2f')
+
 
 with file('value_function.txt','w') as outfile: 
 	outfile.write('#Value Function.\n')
