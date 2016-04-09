@@ -106,31 +106,12 @@ def initialize_state():
 	from_state_belief[24,24]=1.
 	current_pose=[24,24]
 
-def initialize_transitions():
+def modify_trans_mat():
 	global trans_mat
-	#Adding epsilon so that the cummulative distribution has unique values. 
-	epsilon=0.001
-	trans_mat_1+=epsilon
-	trans_mat_2+=epsilon
-
-	trans_mat_1/=trans_mat_1.sum()
- 	trans_mat_2/=trans_mat_2.sum()
-
-	trans_mat[0] = trans_mat_1
-	trans_mat[1] = npy.rot90(trans_mat_1,2)
-	trans_mat[2] = npy.rot90(trans_mat_1,1)
-	trans_mat[3] = npy.rot90(trans_mat_1,3)
-
-	trans_mat[4] = trans_mat_2
-	trans_mat[5] = npy.rot90(trans_mat_2,3)	
-	trans_mat[7] = npy.rot90(trans_mat_2,2)
-	trans_mat[6] = npy.rot90(trans_mat_2,1)
-
-	print "Transition Matrices:\n",trans_mat
-
-	# for i in range(0,action_size):
-	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
-	# 	trans_mat[i] = npy.flipud(trans_mat[i])
+	epsilon = 0.0001
+	for i in range(0,action_size):
+		trans_mat[i][:][:] += epsilon
+		trans_mat[i] /= trans_mat[i].sum()
 
 def initialize_observation():
 	global observation_model
@@ -166,11 +147,6 @@ def bayes_obs_fusion():
 def initialize_all():
 	initialize_state()
 	initialize_observation()
-	initialize_transitions()
-	initialize_unknown_observation()
-	initialize_unknown_transitions()
-	initialize_model_bucket()
-	initialize_obs_model_bucket()
 
 def construct_from_ext_state():
 	global from_state_ext, from_state_belief,discrete_size
@@ -249,5 +225,9 @@ def Inverse_Q_Learning():
 		for length_index in range(0,trajectory_length):			
 			master()
 			time_index += 1
+			print time_index
 
 initialize_all()
+Inverse_Q_Learning()
+
+print q_value_estimate
