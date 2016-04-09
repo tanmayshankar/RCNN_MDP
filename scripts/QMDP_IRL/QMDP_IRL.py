@@ -69,13 +69,6 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
-learning_rate = 0.05
-annealing_rate = (learning_rate/5)/time_limit
-learning_rate_obs = 0.01
-annealing_rate_obs = (learning_rate/5)/time_limit
-
-norm_sum_bel=0.
-
 #### Take required inputs. 
 trans_mat = npy.loadtxt(str(sys.argv[1]))
 trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
@@ -102,6 +95,10 @@ observed_trajectories = observed_trajectories.reshape((number_trajectories,traje
 actions_taken = npy.loadtxt(str(sys.argv[4]))
 actions_taken = actions_taken.reshape((number_trajectories,trajectory_length))
 target_actions = npy.zeros(action_size)
+
+time_limit = number_trajectories*trajectory_length
+learning_rate = 0.05
+annealing_rate = (learning_rate/5)/time_limit
 
 def initialize_state():
 	global current_pose, from_state_belief
@@ -208,21 +205,24 @@ def calc_softmax():
 		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
 
 def update_QMDP_values():
-	global to_state_belief, q_value_estimate, qmdp_values
+	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief
 
 	for act in range(0,action_size):
-		qmdp_values[act] = npy.sum(q_value_estimate[act]*to_state_belief)
+		# qmdp_values[act] = npy.sum(q_value_estimate[act]*to_state_belief)
+		qmdp_values[act] = npy.sum(q_value_estimate[act]*from_state_belief)
 
-def IRL_backprop(action_index):
-	global to_state_belief, q_value_estimate, qmdp_values_softmax, trajectory_index, length_index, target_actions
+# def IRL_backprop():
+def Q_backprop():
+	global to_state_belief, q_value_estimate, qmdp_values_softmax, learning_rate, annealing_rate
+	global trajectory_index, length_index, target_actions, time_index
 
 	update_QMDP_values()
 	calc_softmax()
 
-	for trajectory_index in range(0,number_trajectories):
-		for length_index in range(0,trajectory_length):
-			for act in range(0,action_size):
-				q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*to_state_belief[:,:]
+	alpha = learning_rate - annealing_rate * time_index
+
+	for act in range(0,action_size):
+		q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*to_state_belief[:,:]
 
 def parse_data():
 	global observed_state, trajectory_index, length_index, target_actions
@@ -231,17 +231,23 @@ def parse_data():
 	target_actions[:] = 0
 	target_actions[actions_taken[trajectory_index,length_index]] = 1
 
-
-def master(action_index, time_index):
+def master():
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 	global trajectory_index, length_index
 
 	construct_from_ext_state()
 	belief_prop_extended(actions_taken[trajectory_index,length_index])
+	parse_data()
 	bayes_obs_fusion()
-
-
-	
+	Q_backprop()
 	feedforward_recurrence()	
+
+def Inverse_Q_Learning():
+	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
+	time_index = 0
+	for trajectory_index in range(0,number_trajectories):
+		for length_index in range(0,trajectory_length):			
+			master()
+			time_index += 1
 
 initialize_all()
