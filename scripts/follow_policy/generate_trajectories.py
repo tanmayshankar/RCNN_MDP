@@ -142,8 +142,9 @@ def simulated_model(action_index):
 
 def initialize_observation():
 	global observation_model
-	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
-
+	# observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
+	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
+	observation_model = npy.array([[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]])
 	epsilon=0.0001
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
@@ -192,9 +193,11 @@ def follow_policy():
 	
  	new_demo='y'
 	act_ind = 0.
-	# number_demos = 1
+	 # number_demos = 1
+	max_demo = 50
 
-	while (new_demo!='n'):
+	# while (new_demo!='n'):
+	while (demo_counter<max_demo-2):
 	
 		ax = random.randrange(0,discrete_size)
 		ay = random.randrange(0,discrete_size)
@@ -218,9 +221,9 @@ def follow_policy():
 			simulated_observation_model()
 			simulated_model(act_ind)
 			act_ind = optimal_policy[current_pose[0],current_pose[1]]
-			print "The current pose is:",current_pose
-			print "The observed state is:",observed_state
-			print "Action Taken is:",act_ind
+			# print "The current pose is:",current_pose
+			# print "The observed state is:",observed_state
+			# print "Action Taken is:",act_ind
 
 			state_counter+=1
 
@@ -229,6 +232,7 @@ def follow_policy():
 			current_actions_taken.append(act_ind)
 
 		demo_counter+=1
+		print demo_counter
 
 		trajectories.append(current_trajectory)
 		observed_trajectories.append(current_observed_trajectory)
@@ -237,7 +241,7 @@ def follow_policy():
 		trajectory_lengths[demo_counter] = state_counter
 		trajectory_lengths=trajectory_lengths.astype(int)
 
-		new_demo = raw_input("Do you want to start a new demonstration? ")
+		# new_demo = raw_input("Do you want to start a new demonstration? ")
 
 initialize_all()
 follow_policy()

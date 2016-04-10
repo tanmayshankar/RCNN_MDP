@@ -65,6 +65,8 @@ from_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
 observation_model = npy.zeros(shape=(obs_space,obs_space))
 obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
 observed_state = npy.zeros(2)
+current_pose = npy.zeros(2)
+current_pose = current_pose.astype(int)
 
 state_counter = 0
 action = 'w'
@@ -73,6 +75,7 @@ action = 'w'
 trans_mat = npy.loadtxt(str(sys.argv[1]))
 trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
 
+print trans_mat
 #### Remember, these are target Q values. We don't need to learn these. 
 # q_value_layers = npy.loadtxt(str(sys.argv[2]))
 # q_value_layers = q_value_layers.reshape((action_size,discrete_size,discrete_size))
@@ -83,7 +86,7 @@ q_value_estimate = npy.ones((action_size,discrete_size,discrete_size))
 qmdp_values = npy.zeros(action_size)
 qmdp_values_softmax = npy.zeros(action_size)
 
-number_trajectories = 6
+number_trajectories =47
 trajectory_length = 30
 
 trajectories = npy.loadtxt(str(sys.argv[2]))
@@ -101,21 +104,15 @@ learning_rate = 0.05
 annealing_rate = (learning_rate/5)/time_limit
 
 def initialize_state():
-	global current_pose, from_state_belief
-
-	from_state_belief[24,24]=1.
-	current_pose=[24,24]
-
-def modify_trans_mat():
-	global trans_mat
-	epsilon = 0.0001
-	for i in range(0,action_size):
-		trans_mat[i][:][:] += epsilon
-		trans_mat[i] /= trans_mat[i].sum()
+	# global current_pose, from_state_belief, observed_state
+	global observed_state
+	from_state_belief[observed_state[0],observed_state[1]] = 1.
 
 def initialize_observation():
 	global observation_model
-	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
+	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
+	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
+	observation_model = npy.array([[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]])
 
 	epsilon=0.0001
 	observation_model += epsilon
@@ -154,8 +151,8 @@ def construct_from_ext_state():
 	from_state_ext[w:d+w,w:d+w] = copy.deepcopy(from_state_belief[:,:])
 
 def belief_prop_extended(action_index):
-	global trans_mat_unknown, from_state_ext, to_state_ext, w, discrete_size
-	to_state_ext = signal.convolve2d(from_state_ext,trans_mat_unknown[action_index],'same')
+	global trans_mat, from_state_ext, to_state_ext, w, discrete_size
+	to_state_ext = signal.convolve2d(from_state_ext,trans_mat[action_index],'same')
 	d=discrete_size
 	##NOW MUST FOLD THINGS:
 	for i in range(0,2*w):
@@ -171,7 +168,8 @@ def belief_prop_extended(action_index):
 	to_state_belief[:,:] = copy.deepcopy(to_state_ext[w:d+w,w:d+w])
 
 def feedforward_recurrence():
-	global from_state_belief, to_state_belief
+	global from_state_belief, to_state_belief, corr_to_state_belief
+	# from_state_belief = copy.deepcopy(corr_to_state_belief)
 	from_state_belief = copy.deepcopy(to_state_belief)
 
 def calc_softmax():
@@ -179,6 +177,7 @@ def calc_softmax():
 
 	for act in range(0,action_size):
 		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
+
 
 def update_QMDP_values():
 	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief
@@ -198,14 +197,15 @@ def Q_backprop():
 	alpha = learning_rate - annealing_rate * time_index
 
 	for act in range(0,action_size):
-		q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*to_state_belief[:,:]
+		q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
 
 def parse_data():
-	global observed_state, trajectory_index, length_index, target_actions
+	global observed_state, trajectory_index, length_index, target_actions, current_pose, trajectories
 
 	observed_state[:] = observed_trajectories[trajectory_index,length_index,:]
 	target_actions[:] = 0
 	target_actions[actions_taken[trajectory_index,length_index]] = 1
+	current_pose[:] = trajectories[trajectory_index,length_index,:]
 
 def master():
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
@@ -213,9 +213,13 @@ def master():
 
 	construct_from_ext_state()
 	belief_prop_extended(actions_taken[trajectory_index,length_index])
+	
+	print observed_state, current_pose, target_actions, qmdp_values_softmax
+	# bayes_obs_fusion()
 	parse_data()
-	bayes_obs_fusion()
+
 	Q_backprop()
+	# display_beliefs()
 	feedforward_recurrence()	
 
 def Inverse_Q_Learning():
@@ -223,11 +227,28 @@ def Inverse_Q_Learning():
 	time_index = 0
 	for trajectory_index in range(0,number_trajectories):
 		for length_index in range(0,trajectory_length):			
-			master()
-			time_index += 1
-			print time_index
+			if (from_state_belief.sum()>0):
+				master()
+				time_index += 1
+				print time_index
+			else: 
+				print "We've got a problem"
+
+trajectory_index = 0
+length_index = 0
+parse_data()
+
 
 initialize_all()
 Inverse_Q_Learning()
 
-print q_value_estimate
+# for i in range(0,action_size):
+# 	print "New action."
+# 	for j in range(0,discrete_size):
+# 		print q_value_estimate[i,j,:]
+
+
+with file('Q_Value_Estimate.txt','w') as outfile:
+	for data_slice in q_value_estimate:
+		outfile.write('#Q_Value_Estimate.\n')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
