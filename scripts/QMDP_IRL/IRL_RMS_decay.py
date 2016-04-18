@@ -75,6 +75,12 @@ action = 'w'
 trans_mat = npy.loadtxt(str(sys.argv[1]))
 trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
 
+# trans_gradients = npy.zeros((action_size,transition_space,transition_space))
+# trans_grad_temp = npy.zeros((transition_space,transition_space))
+
+q_gradients = npy.zeros((action_size,discrete_size,discrete_size))
+q_grad_temp = npy.zeros((discrete_size,discrete_size))
+
 print trans_mat
 #### Remember, these are target Q values. We don't need to learn these. 
 # q_value_layers = npy.loadtxt(str(sys.argv[2]))
@@ -205,8 +211,24 @@ def Q_backprop():
 
 	for act in range(0,action_size):
 		q_value_estimate[act,:,:] = q_value_estimate[act,:,:] - alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
-
 		# print "Ello", alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
+
+def Q_RMS_backprop():
+	global to_state_belief, q_value_estimate, qmdp_values_softmax, learning_rate, annealing_rate
+	global trajectory_index, length_index, target_actions, time_index
+
+	update_QMDP_values()
+	calc_softmax()
+	
+	step_value = npy.zeros((discrete_size,discrete_size))
+
+	for act in range(0,action_size):
+
+		q_grad_temp[:,:] = (qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
+		q_gradients[act,:,:] = rms_decay * q_gradients[act,:,:] + (1-rms_decay) * q_grad_temp[:,:]
+
+		q_value_estimate[:,:] -= (learning_rate / math.sqrt(q_gradients[:,:])) * q_grad_temp[:,:]
+
 def parse_data():
 	global observed_state, trajectory_index, length_index, target_actions, current_pose, trajectories
 
@@ -225,8 +247,8 @@ def master():
 	print observed_state, current_pose, target_actions, qmdp_values_softmax
 	# bayes_obs_fusion()
 	parse_data()
-
-	Q_backprop()
+	# Q_backprop()
+	Q_RMS_backprop()
 	# display_beliefs()
 	feedforward_recurrence()	
 
