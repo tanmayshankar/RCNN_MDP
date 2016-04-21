@@ -102,7 +102,7 @@ target_actions = npy.zeros(action_size)
 
 time_limit = number_trajectories*trajectory_length
 learning_rate = 1
-annealing_rate = 0
+annealing_rate = learning_rate/5
 
 def initialize_state():
 	# global current_pose, from_state_belief, observed_state
@@ -257,6 +257,7 @@ def experience_replay():
 	# for trajectory_index in trajectory_pick:
 	for i in range(0,number_trajectories-1):
 		trajectory_index = trajectory_pick[i]
+		initialize_all()
 		for length_index in range(0,trajectory_length):			
 			if (from_state_belief.sum()>0):
 				master()
@@ -268,13 +269,21 @@ length_index = 0
 parse_data()
 
 
-initialize_all()
+
 experience_replay()
 
 # for i in range(0,action_size):
 # 	print "New action."
 # 	for j in range(0,discrete_size):
 # 		print q_value_estimate[i,j,:]
+
+
+value_function = npy.amax(q_value_estimate, axis=0)
+imshow(value_function, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+plt.show(block=False)
+colorbar()
+draw()
+show()
 
 
 with file('Q_Value_Estimate.txt','w') as outfile:

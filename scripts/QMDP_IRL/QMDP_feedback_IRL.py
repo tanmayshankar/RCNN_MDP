@@ -84,7 +84,7 @@ q_value_layers = npy.zeros((action_size,discrete_size,discrete_size))
 qmdp_values = npy.zeros(action_size)
 qmdp_values_softmax = npy.zeros(action_size)
 
-number_trajectories =47
+number_trajectories =7
 trajectory_length = 30
 
 trajectories = npy.loadtxt(str(sys.argv[2]))
@@ -184,8 +184,11 @@ def belief_recurrence():
 def calc_softmax():
 	global qmdp_values, qmdp_values_softmax
 
+	dummy_sum = npy.sum(npy.exp(qmdp_values),axis=0)
+
 	for act in range(0,action_size):
-		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
+		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / dummy_sum
+	print "Hello", qmdp_values_softmax
 
 def dummy_softmax():
 	global qmdp_values, qmdp_values_softmax, action_size
@@ -220,7 +223,7 @@ def reward_backprop():
 	global time_index
 
 	update_QMDP_values()
-	calc_softmax
+	calc_softmax()
 
 	alpha = learning_rate - annealing_rate*time_index
 
@@ -240,7 +243,7 @@ def update_q_estimate():
 	q_value_estimate = reward_estimate + q_value_layers
 
 def conv_layer():	
-	global value_function, trans_mat_flip, 
+	global value_function, trans_mat_flip
 
 	for act in range(0,action_size):		
 		#Convolve with each transition matrix.

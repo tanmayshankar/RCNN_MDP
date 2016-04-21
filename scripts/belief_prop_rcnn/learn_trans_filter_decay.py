@@ -10,7 +10,6 @@ from scipy.stats import rankdata
 from matplotlib.pyplot import *
 from scipy import signal
 import copy
-import math
 
 
 ###### DEFINITIONS
@@ -27,7 +26,7 @@ action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 transition_space = 3
 obs_space = 3
 h=obs_space/2
-time_limit = 1000
+time_limit = 500
 
 bucket_space = npy.zeros((action_size,transition_space**2))
 cummulative = npy.zeros(action_size)
@@ -70,20 +69,18 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
-batch_size=1
-learning_rate = 0.05
-annealing_rate = (learning_rate/5)/(time_limit/batch_size)
+learning_rate = npy.zeros(action_size)
+learning_rate[:] = 0.05
+annealing_rate = (learning_rate[0]/5)/time_limit
 learning_rate_obs = 0.01
-annealing_rate_obs = (learning_rate/5)/(time_limit/batch_size)
-
-rms_decay = 0.9
-
-obs_gradients = npy.zeros((obs_space,obs_space))
-trans_gradients = npy.zeros((action_size,transition_space,transition_space))
-trans_grad_temp = npy.zeros((transition_space,transition_space))
-obs_grad_temp = npy.zeros((obs_space,obs_space))
+annealing_rate_obs = (learning_rate/5)/time_limit
+time_count = npy.zeros(action_size)
 
 norm_sum_bel=0.
+
+mean_error = npy.zeros((time_limit+10,action_size))
+std_dev = npy.zeros((time_limit+10,action_size))
+mean_error_2 = npy.zeros((time_limit+10,action_size))
 
 
 def initialize_state():
@@ -193,7 +190,8 @@ def bayes_obs_fusion():
 			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[obs_space/2+i,obs_space/2+j]
 			##MUST INVOKE THE UNKNOWN OBVS
 			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[obs_space/2+i,obs_space/2+j]
-			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[h+i,h+j]
+			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[h+i,h+j]
+			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 	norm_sum_bel = dummy.sum()
 
@@ -328,57 +326,91 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
-def rms_backprop_trans(action_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief
-	global observation_model, observed_state, corr_to_state_belief, trans_gradients, trans_grad_temp
+def back_prop_trans(action_index,time_index):
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state, corr_to_state_belief, time_count
+
+	# loss = npy.zeros(shape=(transition_space,transition_space))
+	# alpha = learning_rate - annealing_rate * time_index
+	time_count[action_index] +=1
+	learning_rate[action_index] -= annealing_rate*time_count[action_index]
+	alpha = learning_rate[action_index]
+	# alpha = learning_rate[]
+	# alpha = learning_rate
+	lamda = 1.
 
 	w = transition_space/2
 	x = copy.deepcopy(observed_state[0])
 	y = copy.deepcopy(observed_state[1])
 
-	step_value = npy.zeros((transition_space,transition_space))
-
 	for m in range(-w,w+1):
 		for n in range(-w,w+1):
-			
-			trans_grad_temp = npy.zeros((transition_space,transition_space))
-
+			loss_1=0.
 			for i in range(0,discrete_size):
 				for j in range(0,discrete_size):
-					
+					# if (((i-m)>=0)and((i-m)<discrete_size)and((j-n)>=0)and((j-n)<discrete_size)and((i-observed_state[0])<obs_space)and((j-observed_state[1])<obs_space)and((j-observed_state[1])>=0)and((i-observed_state[0])>=0)):
 					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
-						if (h+i-x>=0)and(h+j-y>=0)and(h+j-y<obs_space)and(h+i-x<obs_space):
+						loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*from_state_belief[i-m,j-n] 
+							# loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
+			
+			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
+			# if (temp>=0)and(temp<=1):
+			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
+				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
 
-							trans_grad_temp[w+m,w+n] -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
-
-			trans_gradients[action_index,w+m,w+n] = rms_decay * trans_gradients[action_index,w+m,w+n] + (1-rms_decay) * trans_grad_temp[w+m,w+n]
-			step_value[w+m,w+n] = learning_rate * trans_grad_temp[w+m,w+n] / npy.sqrt(trans_gradients[action_index,w+m,w+n]) 
-
-			if ((trans_mat_unknown[action_index,w+m,w+n]-step_value[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n]-step_value[w+m,w+n]<1)):
-				trans_mat_unknown[action_index,w+m,w+n]-=step_value[w+m,w+n]
-
-def rms_backprop_obs(action_index):
-	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief 
-	global corr_to_state_belief, norm_sum_bel, obs_gradients, obs_grad_temp, rms_decay
-	
+	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
+def back_prop_obs(action_index,time_index):
+	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief, corr_to_state_belief, norm_sum_bel
+	alpha = learning_rate_obs - annealing_rate_obs * time_index
 	h = obs_space/2
-	step_value = npy.zeros((obs_space,obs_space))
 
 	for m in range(-h,h+1):
 		for n in range(-h,h+1):
+			loss_1 =0.
+			# if (observed_state[0]+m>=0):
+			# 	print "A. "
+			# if (observed_state[0]+m<discrete_size):
+			# 	print "B. "
+			# if (observed_state[1]+n<discrete_size):
+			# 	print "C. "
+			# if (observed_state[1]+n>=0):
+			# 	print "D. "
 
 			if (observed_state[0]+m>=0)and(observed_state[0]+m<discrete_size)and(observed_state[1]+n<discrete_size)and(observed_state[1]+n>=0):
-				obs_grad_temp[h+m,h+n] = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
+				loss_1 = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
 
-			obs_gradients[h+m,h+n] = rms_decay * obs_gradients[h+m,h+n] + (1-rms_decay) * obs_grad_temp[h+m,h+n]
-			step_value[h+m,h+n] = learning_rate / math.sqrt(obs_gradients[h+m,h+n]) * obs_grad_temp[h+m,h+n]
-
-			if (obs_model_unknown[h+m,h+n] - step_value[h+m,h+n]>=0)and(obs_model_unknown[h+m,h+n] - step_value[h+m,h+n]<1):
-				obs_model_unknown[h+m,h+n] -= step_value[h+m,h+n]
+			if (obs_model_unknown[h+m,h+n]-alpha*loss_1>=0)and(obs_model_unknown[h+m,h+n]-alpha*loss_1<1):
+				obs_model_unknown[h+m,h+n] -= alpha * loss_1
 
 def recurrence():
 	global from_state_belief,target_belief
 	from_state_belief = copy.deepcopy(target_belief)
+
+
+def compute_error(time_index):
+	global transition_space,trans_mat_unknown, trans_mat, action_index, to_state_belief, target_belief
+
+	dummy_trans = copy.deepcopy(trans_mat_unknown)
+	dummy_trans_2 = copy.deepcopy(trans_mat_unknown)
+	dummy_trans_2 -= trans_mat
+
+	for i in range(0,action_size):
+		dummy_trans[i] = npy.fliplr(dummy_trans[i])
+	 	dummy_trans[i] = npy.flipud(dummy_trans[i])
+	
+	if (time_index>0):
+		mean_error[time_index,:]=copy.deepcopy(mean_error[time_index-1,:])
+		std_dev[time_index,:]=copy.deepcopy(std_dev[time_index-1,:])
+		mean_error_2[time_index,:]=copy.deepcopy(mean_error_2[time_index-1,:])	
+
+		mean_error[time_index,action_index] = -(npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:]) + (1-trans_mat[:,:])*npy.log(1 - dummy_trans[:,:] )))
+		std_dev[time_index,action_index] = npy.sqrt(npy.sum(dummy_trans_2[action_index]**2)/(transition_space**2))	
+		mean_error_2[time_index,action_index] = npy.sum(trans_mat[action_index]*dummy_trans[action_index])
+
+	else:
+		mean_error[time_index,action_index] = npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:]) + (1-trans_mat[:,:])*npy.log(1 - dummy_trans[:,:] ))
+		std_dev[time_index,action_index] = npy.sqrt(npy.sum(dummy_trans_2[action_index]**2)/(transition_space**2))	
+		mean_error_2[time_index,action_index] = npy.sum(trans_mat[action_index]*dummy_trans[action_index])
+	
 
 def master(action_index, time_index):
 
@@ -387,17 +419,16 @@ def master(action_index, time_index):
 	# belief_prop(action_index)
 	construct_from_ext_state()
 	belief_prop_extended(action_index)
-	bayes_obs_fusion()
+	# bayes_obs_fusion()
 
 	simulated_model(action_index)
-	simulated_observation_model()
+	# simulated_observation_model()
 
-	# back_prop_trans(action_index, time_index)
-	rms_backprop_trans(action_index)
+	back_prop_trans(action_index, time_index)
 	# back_prop_obs(action_index, time_index)
-	rms_backprop_obs(action_index)
-
 	recurrence()	
+
+	compute_error(time_index)
 
 initialize_all()
 
@@ -415,6 +446,7 @@ def input_actions():
 
 input_actions()
 
+
 def flip_trans_again():
 	for i in range(0,action_size):
 		trans_mat_unknown[i] = npy.fliplr(trans_mat_unknown[i])
@@ -423,6 +455,9 @@ def flip_trans_again():
 flip_trans_again()
 
 print "Learnt Transition Model:\n", trans_mat_unknown
+
+# for i in range(0,8):
+# 	print trans_mat_unknown[i].sum()
 
 for i in range(0,8):
 	trans_mat_unknown[i,:,:] /= trans_mat_unknown[i,:,:].sum()
@@ -479,12 +514,48 @@ with file('estimated_transition.txt','w') as outfile:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
-with file('estimated_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,obs_model_unknown,fmt='%-7.2f')
+# with file('estimated_observation.txt','w') as outfile: 
+# 	# for data_slice in trans_mat_unknown:
+# 	outfile.write('#Observation Model.\n')
+# 	npy.savetxt(outfile,obs_model_unknown,fmt='%-7.2f')
 
-with file('actual_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,observation_model,fmt='%-7.2f')
+# with file('actual_observation.txt','w') as outfile: 
+# 	# for data_slice in trans_mat_unknown:
+# 	outfile.write('#Observation Model.\n')
+# 	npy.savetxt(outfile,observation_model,fmt='%-7.2f')
+
+
+with file('mean_error.txt','w') as outfile: 
+	outfile.write('#Mean Error.\n')
+	npy.savetxt(outfile,mean_error,fmt='%-7.2f')
+
+
+with file('std_dev.txt','w') as outfile: 
+	outfile.write('#Standard Deviation.\n')
+	npy.savetxt(outfile,std_dev,fmt='%-7.2f')
+
+with file('mean_error_2.txt','w') as outfile: 
+	outfile.write('#Mean Error.\n')
+	npy.savetxt(outfile,mean_error_2,fmt='%-7.2f')
+
+
+
+
+mean_error=npy.transpose(mean_error)
+mean_error_2 = npy.transpose(mean_error_2)
+std_dev = npy.transpose(std_dev)
+
+with file('Mean_Error_ActionWise.txt','w') as outfile: 
+	for data in mean_error:
+		outfile.write('New Action.\n')
+		npy.savetxt(outfile,data,fmt='%-7.2f')
+
+with file('Mean_Error_2_ActionWise.txt','w') as outfile: 
+	for data in mean_error_2:
+		outfile.write('New Action.\n')
+		npy.savetxt(outfile,data,fmt='%-7.2f')
+
+with file('Std_Dev_ActionWise.txt','w') as outfile: 
+	for data in std_dev:
+		outfile.write('New Action.\n')
+		npy.savetxt(outfile,data,fmt='%-7.2f')

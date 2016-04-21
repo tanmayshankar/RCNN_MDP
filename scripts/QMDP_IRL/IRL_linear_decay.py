@@ -11,6 +11,7 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
+
 ###### DEFINITIONS
 basis_size = 3
 discrete_size = 50
@@ -234,6 +235,7 @@ def Inverse_Q_Learning():
 	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
 	time_index = 0
 	for trajectory_index in range(0,number_trajectories):
+		initialize_all()
 		for length_index in range(0,trajectory_length):			
 			if (from_state_belief.sum()>0):
 				master()
@@ -247,14 +249,15 @@ length_index = 0
 parse_data()
 
 
-initialize_all()
+
 Inverse_Q_Learning()
 
-# for i in range(0,action_size):
-# 	print "New action."
-# 	for j in range(0,discrete_size):
-# 		print q_value_estimate[i,j,:]
-
+value_function = npy.amax(q_value_estimate, axis=0)
+imshow(value_function, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+plt.show(block=False)
+colorbar()
+draw()
+show()
 
 with file('Q_Value_Estimate.txt','w') as outfile:
 	for data_slice in q_value_estimate:

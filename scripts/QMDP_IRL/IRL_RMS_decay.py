@@ -10,6 +10,7 @@ from scipy.stats import rankdata
 from matplotlib.pyplot import *
 from scipy import signal
 import copy
+import math
 
 ###### DEFINITIONS
 basis_size = 3
@@ -27,6 +28,7 @@ h=obs_space/2
 time_limit = 500
 trajectory_index=0
 length_index=0
+rms_decay = 0.9
 
 bucket_space = npy.zeros((action_size,transition_space**2))
 cummulative = npy.zeros(action_size)
@@ -227,7 +229,7 @@ def Q_RMS_backprop():
 		q_grad_temp[:,:] = (qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
 		q_gradients[act,:,:] = rms_decay * q_gradients[act,:,:] + (1-rms_decay) * q_grad_temp[:,:]
 
-		q_value_estimate[:,:] -= (learning_rate / math.sqrt(q_gradients[:,:])) * q_grad_temp[:,:]
+		q_value_estimate[:,:] -= learning_rate *q_grad_temp[:,:] / npy.sqrt(q_gradients[:,:])
 
 def parse_data():
 	global observed_state, trajectory_index, length_index, target_actions, current_pose, trajectories

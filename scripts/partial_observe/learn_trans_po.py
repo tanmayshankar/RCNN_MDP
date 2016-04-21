@@ -137,8 +137,8 @@ def initialize_unknown_observation():
 
 def initialize_observation():
 	global observation_model
-	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
-	# observation_model = npy.array([[0.,0.,0.],[0.,1.,0.],[0.,0.,0.]])
+	# observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
+	observation_model = npy.array([[0.,0.,0.],[0.,1.,0.],[0.,0.,0.]])
 	# print observation_model
 
 	epsilon=0.0001
@@ -286,9 +286,7 @@ def simulated_model(action_index):
 	if (bucket_index!=((transition_space**2)/2)):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
-				
-	target_belief[:,:] = 0. 
-	target_belief[current_pose[0],current_pose[1]]=1.
+
 	 
 def simulated_observation_model():
 	global observation_model, obs_bucket_space, obs_bucket_index, observed_state, current_pose
@@ -309,6 +307,10 @@ def simulated_observation_model():
 		remap_index = remap_indices(obs_bucket_index)
 		observed_state[0] += action_space[remap_index,0]
 		observed_state[1] += action_space[remap_index,1]
+
+
+	target_belief[:,:] = 0. 
+	target_belief[observed_state[0],observed_state[1]]=1.
 
 	# print "Observed State: ", observed_state
 

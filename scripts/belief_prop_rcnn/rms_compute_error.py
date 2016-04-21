@@ -85,6 +85,10 @@ obs_grad_temp = npy.zeros((obs_space,obs_space))
 
 norm_sum_bel=0.
 
+mean_error = npy.zeros((time_limit+10,action_size))
+std_dev = npy.zeros((time_limit+10,action_size))
+mean_error_2 = npy.zeros((time_limit+10,action_size))
+
 
 def initialize_state():
 	global current_pose, from_state_belief
@@ -347,9 +351,8 @@ def rms_backprop_trans(action_index):
 				for j in range(0,discrete_size):
 					
 					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
-						if (h+i-x>=0)and(h+j-y>=0)and(h+j-y<obs_space)and(h+i-x<obs_space):
-
-							trans_grad_temp[w+m,w+n] -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
+				
+						trans_grad_temp[w+m,w+n] -= 2*(target_belief[i,j]-to_state_belief[i,j])*from_state_belief[i-m,j-n] 
 
 			trans_gradients[action_index,w+m,w+n] = rms_decay * trans_gradients[action_index,w+m,w+n] + (1-rms_decay) * trans_grad_temp[w+m,w+n]
 			step_value[w+m,w+n] = learning_rate * trans_grad_temp[w+m,w+n] / npy.sqrt(trans_gradients[action_index,w+m,w+n]) 
@@ -380,6 +383,31 @@ def recurrence():
 	global from_state_belief,target_belief
 	from_state_belief = copy.deepcopy(target_belief)
 
+def compute_error(time_index):
+	global transition_space,trans_mat_unknown, trans_mat, action_index, to_state_belief, target_belief
+
+	dummy_trans = copy.deepcopy(trans_mat_unknown)
+	dummy_trans_2 = copy.deepcopy(trans_mat_unknown)
+	dummy_trans_2 -= trans_mat
+
+	for i in range(0,action_size):
+		dummy_trans[i] = npy.fliplr(dummy_trans[i])
+	 	dummy_trans[i] = npy.flipud(dummy_trans[i])
+	
+	if (time_index>0):
+		mean_error[time_index,:]=copy.deepcopy(mean_error[time_index-1,:])
+		std_dev[time_index,:]=copy.deepcopy(std_dev[time_index-1,:])
+		mean_error_2[time_index,:]=copy.deepcopy(mean_error_2[time_index-1,:])	
+
+		mean_error[time_index,action_index] = -(npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:]) + (1-trans_mat[:,:])*npy.log(1 - dummy_trans[:,:] )))
+		std_dev[time_index,action_index] = npy.sqrt(npy.sum(dummy_trans_2[action_index]**2)/(transition_space**2))	
+		mean_error_2[time_index,action_index] = npy.sum(trans_mat[action_index]*dummy_trans[action_index])
+
+	else:
+		mean_error[time_index,action_index] = npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:]) + (1-trans_mat[:,:])*npy.log(1 - dummy_trans[:,:] ))
+		std_dev[time_index,action_index] = npy.sqrt(npy.sum(dummy_trans_2[action_index]**2)/(transition_space**2))	
+		mean_error_2[time_index,action_index] = npy.sum(trans_mat[action_index]*dummy_trans[action_index])
+	
 def master(action_index, time_index):
 
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
@@ -387,17 +415,19 @@ def master(action_index, time_index):
 	# belief_prop(action_index)
 	construct_from_ext_state()
 	belief_prop_extended(action_index)
-	bayes_obs_fusion()
+	# bayes_obs_fusion()
 
 	simulated_model(action_index)
-	simulated_observation_model()
+	# simulated_observation_model()
 
 	# back_prop_trans(action_index, time_index)
 	rms_backprop_trans(action_index)
 	# back_prop_obs(action_index, time_index)
-	rms_backprop_obs(action_index)
+	#### rms_backprop_obs(action_index)
 
 	recurrence()	
+
+	compute_error(time_index)
 
 initialize_all()
 
@@ -479,12 +509,48 @@ with file('estimated_transition.txt','w') as outfile:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
-with file('estimated_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,obs_model_unknown,fmt='%-7.2f')
+# with file('estimated_observation.txt','w') as outfile: 
+# 	# for data_slice in trans_mat_unknown:
+# 	outfile.write('#Observation Model.\n')
+# 	npy.savetxt(outfile,obs_model_unknown,fmt='%-7.2f')
 
-with file('actual_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,observation_model,fmt='%-7.2f')
+# with file('actual_observation.txt','w') as outfile: 
+# 	# for data_slice in trans_mat_unknown:
+# 	outfile.write('#Observation Model.\n')
+# 	npy.savetxt(outfile,observation_model,fmt='%-7.2f')
+
+
+with file('mean_error.txt','w') as outfile: 
+	outfile.write('#Mean Error.\n')
+	npy.savetxt(outfile,mean_error,fmt='%-7.2f')
+
+
+with file('std_dev.txt','w') as outfile: 
+	outfile.write('#Standard Deviation.\n')
+	npy.savetxt(outfile,std_dev,fmt='%-7.2f')
+
+with file('mean_error_2.txt','w') as outfile: 
+	outfile.write('#Mean Error.\n')
+	npy.savetxt(outfile,mean_error_2,fmt='%-7.2f')
+
+
+
+
+mean_error=npy.transpose(mean_error)
+mean_error_2 = npy.transpose(mean_error_2)
+std_dev = npy.transpose(std_dev)
+
+with file('Mean_Error_ActionWise.txt','w') as outfile: 
+	for data in mean_error:
+		outfile.write('New Action.\n')
+		npy.savetxt(outfile,data,fmt='%-7.2f')
+
+with file('Mean_Error_2_ActionWise.txt','w') as outfile: 
+	for data in mean_error_2:
+		outfile.write('New Action.\n')
+		npy.savetxt(outfile,data,fmt='%-7.2f')
+
+with file('Std_Dev_ActionWise.txt','w') as outfile: 
+	for data in std_dev:
+		outfile.write('New Action.\n')
+		npy.savetxt(outfile,data,fmt='%-7.2f')
