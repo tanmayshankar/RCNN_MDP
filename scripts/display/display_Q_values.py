@@ -2,11 +2,11 @@
 import numpy as npy
 from scipy.stats import truncnorm
 import matplotlib.pyplot as plt
-import rospy
+# import rospy
 import pylab as pl
-from std_msgs.msg import String
-import roslib
-from nav_msgs.msg import Odometry
+# from std_msgs.msg import String
+# import roslib
+# from nav_msgs.msg import Odometry
 import sys
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
@@ -33,9 +33,9 @@ action_size =8
 
 # reward_function = npy.loadtxt(str(sys.argv[2]))
 
-q_value_function = npy.loadtxt(str(sys.argv[1]))
-q_value_function = q_value_function.reshape((action_size, discrete_size,discrete_size))
-q_value_estimate = npy.loadtxt(str(sys.argv[2]))
+# q_value_function = npy.loadtxt(str(sys.argv[1]))
+# q_value_function = q_value_function.reshape((action_size, discrete_size,discrete_size))
+q_value_estimate = npy.loadtxt(str(sys.argv[1]))
 q_value_estimate = q_value_estimate.reshape((action_size, discrete_size,discrete_size))
 # value_function = npy.loadtxt(str(sys.argv[3]))/1000	
 
@@ -48,11 +48,11 @@ q_value_estimate = q_value_estimate.reshape((action_size, discrete_size,discrete
 # action_space = npy.array([[1,0],[-1,0],[0,-1],[0,1],[1,-1],[1,1],[-1,-1],[-1,1]])
 ################# UP,  DOWN,  LEFT, RIGHT,UPLEFT,UPRIGHT,DOWNLEFT,DOWNRIGHT ##################
 for i in range(0,action_size):
-	imshow(q_value_function[i], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
-	plt.show(block=False)
-	colorbar()
-	draw()
-	show() 
+	# imshow(q_value_function[i], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+	# plt.show(block=False)
+	# colorbar()
+	# draw()
+	# show() 
 
 	imshow(q_value_estimate[i], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 	plt.show(block=False)

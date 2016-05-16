@@ -202,29 +202,37 @@ def Q_backprop():
 	# dummy_softmax()
  
 	alpha = learning_rate - annealing_rate * time_index
+	# alpha = learning_rate
 
 	for act in range(0,action_size):
 		q_value_estimate[act,:,:] = q_value_estimate[act,:,:] - alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
 
 		# print "Ello", alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
-def parse_data():
+def parse_data(traj_ind,len_ind):
 	global observed_state, trajectory_index, length_index, target_actions, current_pose, trajectories
 
-	observed_state[:] = observed_trajectories[trajectory_index,length_index,:]
-	target_actions[:] = 0
-	target_actions[actions_taken[trajectory_index,length_index]] = 1
-	current_pose[:] = trajectories[trajectory_index,length_index,:]
+	# observed_state[:] = observed_trajectories[trajectory_index,length_index,:]
+	# target_actions[:] = 0
+	# target_actions[actions_taken[trajectory_index,length_index]] = 1
+	# current_pose[:] = trajectories[trajectory_index,length_index,:]
 
-def master():
+	observed_state[:] = observed_trajectories[traj_ind,len_ind,:]
+	target_actions[:] = 0
+	target_actions[actions_taken[traj_ind,len_ind]] = 1
+	current_pose[:] = trajectories[traj_ind,len_ind,:]
+
+def master(traj_ind, len_ind):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 	global trajectory_index, length_index
 
+	
 	construct_from_ext_state()
-	belief_prop_extended(actions_taken[trajectory_index,length_index])
+	# belief_prop_extended(actions_taken[trajectory_index,length_index])
+	belief_prop_extended(actions_taken[traj_ind,len_ind])
 	
 	print observed_state, current_pose, target_actions, qmdp_values_softmax
 	# bayes_obs_fusion()
-	parse_data()
+	parse_data(traj_ind,len_ind)
 
 	Q_backprop()
 	# display_beliefs()
@@ -233,18 +241,32 @@ def master():
 def Inverse_Q_Learning():
 	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
 	time_index = 0
+	# for trajectory_index in range(0,number_trajectories):
+	selected_traj = npy.array([13,14,16])
+	# selected_traj = npy.array([0,3,4,7,8,9,13,14,16,17,22,28,32,33,37,44])
+	# for trajectory_index in selected_traj:
 	for trajectory_index in range(0,number_trajectories):
+		parse_data(trajectory_index,0)
+		initialize_state()
 		for length_index in range(0,trajectory_length):			
 			if (from_state_belief.sum()>0):
-				master()
+				master(trajectory_index, length_index)
 				time_index += 1
 				print time_index
 			else: 
 				print "We've got a problem"
 
+		imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+		# plt.show(block=False)
+		plt.show()
+		# plt.title('Trajectory Index: %i')
+		# colorbar()
+		# draw()
+		# show() 
+
 trajectory_index = 0
 length_index = 0
-parse_data()
+parse_data(0,0)
 
 
 initialize_all()
