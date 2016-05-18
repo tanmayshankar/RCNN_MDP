@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as npy
-import matplotlib.pyplot as plt
-import rospy
+# import matplotlib.pyplot as plt
+# import rospy
 # from std_msgs.msg import String
 # import roslib
 import sys
@@ -37,14 +37,14 @@ dummy_rew = copy.deepcopy(reward_function)
 dummy_rew = abs(dummy_rew)
 reward_function /= npy.amax(dummy_rew)
 
-action_factor_reward = 0.1
+action_factor_reward = 0.2
 
 value_functions = npy.zeros(shape=(time_limit,discrete_size,discrete_size))
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
 optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
 
-# gamma = 0.95
-gamma = 0.90
+gamma = 0.95
+gamma = 0.98
 # gamma = 1.
 
 # trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
@@ -69,15 +69,15 @@ def modify_trans_mat():
 def create_action_reward():
 	global reward_function, action_reward_function, action_factor_reward
 
-	for i in range(0,action_size):
-		action_reward_function[i,:,:] = copy.deepcopy(reward_function)
+	# for i in range(0,action_size):
+	# 	action_reward_function[i,:,:] = copy.deepcopy(reward_function)
 		
-	# for i in range(0,action_size/2):
-	# 	action_reward_function[i,:,:] = copy.deepcopy(reward_function) - (i%4)*action_factor_reward * npy.amax(reward_function)
-	# 	# print (i%4)
+	for i in range(0,action_size/2):
+		action_reward_function[i,:,:] = copy.deepcopy(reward_function) - (i%4)*action_factor_reward * npy.amax(reward_function)
+		# print (i%4)
 
-	# for i in range(action_size/2,action_size):
-	# 	action_reward_function[i,:,:] = copy.deepcopy(reward_function) - 1.414*(i%4)*action_factor_reward * npy.amax(reward_function)
+	for i in range(action_size/2,action_size):
+		action_reward_function[i,:,:] = copy.deepcopy(reward_function) - 1.414*(i%4)*action_factor_reward * npy.amax(reward_function)
 
 def initialize():
 	modify_trans_mat()
@@ -118,7 +118,6 @@ def conv_layer():
 
 	print "The next value function.",value_function
 	
-
 def reward_bias():
 	global value_function
 	value_function = value_function + reward_function
@@ -154,7 +153,7 @@ optimal_policy[0,49] = 6
 optimal_policy[49,0] = 5
 optimal_policy[49,49] = 4
 
-## FOR MODIFIED:
+# # FOR MODIFIED:
 # optimal_policy[0,:] = 0
 # # optimal_policy[10,:] = 7
 # optimal_policy[49,:] = 1
@@ -164,6 +163,11 @@ optimal_policy[49,49] = 4
 # optimal_policy[0,49] = 4
 # optimal_policy[49,0] = 7
 # optimal_policy[49,49] = 6
+
+print "Here's the policy."
+for i in range(0,discrete_size):
+	print optimal_policy[i]
+
 
 dummy_policy = copy.deepcopy(optimal_policy)
 dummy_policy[1:49,1:49] = 7
@@ -180,11 +184,6 @@ with file('action_reward_function.txt','w') as outfile:
 with file('output_policy.txt','w') as outfile: 
 	outfile.write('#Policy.\n')
 	npy.savetxt(outfile,optimal_policy,fmt='%-7.2f')
-
-with file('dummy_policy.txt','w') as outfile: 
-	outfile.write('#Policy.\n')
-	npy.savetxt(outfile,dummy_policy,fmt='%-7.2f')
-
 
 with file('value_function.txt','w') as outfile: 
 	outfile.write('#Value Function.\n')
