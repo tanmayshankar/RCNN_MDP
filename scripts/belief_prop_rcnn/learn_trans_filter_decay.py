@@ -11,7 +11,6 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
-
 ###### DEFINITIONS
 
 basis_size = 3
@@ -69,8 +68,7 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
-learning_rate = npy.zeros(action_size)
-learning_rate[:] = 0.05
+learning_rate = 0.05 * npy.ones(action_size)
 annealing_rate = (learning_rate[0]/5)/time_limit
 learning_rate_obs = 0.01
 annealing_rate_obs = (learning_rate/5)/time_limit
@@ -468,9 +466,6 @@ print "Actual Transition Model:\n" , trans_mat
 print "Learnt Observation Model:\n", obs_model_unknown
 obs_model_unknown/=obs_model_unknown.sum()
 print "Normalized Observation Model:\n", obs_model_unknown
-
-
-
 
 ######TO RUN FEEDFORWARD PASSES OF THE RECURRENT CONV NET.#########
 
