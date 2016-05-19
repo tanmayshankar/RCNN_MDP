@@ -53,6 +53,7 @@ to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 target_belief = npy.zeros(shape=(discrete_size,discrete_size))
 corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
+intermed_bel = npy.zeros((discrete_size,discrete_size))
 
 #### DEFINING EXTENDED STATE BELIEFS 
 w = transition_space/2
@@ -279,34 +280,44 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
-def back_prop_trans(action_index,time_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state, corr_to_state_belief, time_count
 
-	time_count[action_index] +=1
-	alpha = learning_rate - annealing_rate * time_count[action_index]
-	lamda = 1.
+
+def calc_intermed_bel():
+	# global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
+	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel
+	
+	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+	h = obs_space/2
+
+	for i in range(-h,h+1):
+		for j in range(-h,h+1):
+			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
+	intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+
+def calc_sensitivity():
+	global from_state_ext, sens_belief
+
+	sens_belief = copy.deepcopy(from_state_ext)
+	sens_belief = npy.fliplr(sens_belief)
+	sens_belief = npy.flipud(sens_belief)
+
+def back_prop_conv(action_index, time_index):
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, lamda_vector, sens_belief
+
+	calc_intermed_bel()
+	calc_sensitivity()
 
 	w = transition_space/2
-	x = copy.deepcopy(observed_state[0])
-	y = copy.deepcopy(observed_state[1])
+	time_count[action_index] +=1
+	alpha = learning_rate - annealing_rate*time_count[action_index]
 
-	for m in range(-w,w+1):
-		for n in range(-w,w+1):
-			loss_1=0.
-			for i in range(0,discrete_size):
-				for j in range(0,discrete_size):
-					# if (((i-m)>=0)and((i-m)<discrete_size)and((j-n)>=0)and((j-n)<discrete_size)and((i-observed_state[0])<obs_space)and((j-observed_state[1])<obs_space)and((j-observed_state[1])>=0)and((i-observed_state[0])>=0)):
-					if (i-m>=0)and(i-m<discrete_size)and(j-n>=0)and(j-n<discrete_size):
-						if (h+i-x>=0)and(h+j-y>=0)and(h+j-y<obs_space)and(h+i-x<obs_space):
+	grad_update = signal.convolve2d(sens_belief, intermed_bel, 'valid')
+	# print "GRAD UPDATE SHAPE:", grad_update.shape
+	trans_mat_unknown[action_index] += alpha*grad_update
 
-							loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*observation_model[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
-							# loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
-			
-			loss_1 += lamda_vector[action_index] * (trans_mat_unknown[action_index,:,:].sum() - 1.)
-			lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
-
-			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
-				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
+	# loss_1 = lamda_vector[action_index] * (trans_mat_unknown[action_index].sum() - 1.)
+	# trans_mat_unknown[action_index] -= alpha * loss_1
+	# lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
 
 def recurrence():
 	global from_state_belief,target_belief
@@ -324,7 +335,7 @@ def master(action_index, time_index):
 	simulated_model(action_index)
 	simulated_observation_model()
 
-	back_prop_trans(action_index, time_index)
+	back_prop_conv(action_index, time_index)
 	recurrence()	
 
 initialize_all()
