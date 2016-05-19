@@ -60,11 +60,9 @@ lamda_vector = 10* npy.ones(action_size)
 state_counter = 0
 action = 'w'
 
-learning_rate = 0.05
 lamda = 10
-annealing_rate = (learning_rate/5)/time_limit
-learning_rate = 0.05 * npy.ones(action_size)
-annealing_rate = (learning_rate[0]/5)/time_limit
+learning_rate = 0.05
+annealing_rate = (8*(learning_rate/5))/time_limit 
 time_count = npy.zeros(action_size)
 # annealing_rate = (learning_rate//)
 
@@ -291,9 +289,8 @@ def back_prop(action_index,time_index):
 	w = transition_space/2
 
 	time_count[action_index] +=1
-	learning_rate[action_index] -= annealing_rate*time_count[action_index]
-	alpha = learning_rate[action_index]
-
+	alpha = learning_rate - annealing_rate*time_count[action_index]
+	
 	for m in range(-w,w+1):
 		for n in range(-w,w+1):
 			loss_1=0.
@@ -310,8 +307,6 @@ def back_prop(action_index,time_index):
 				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
 
 			lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
-
-	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
 
 def recurrence():
 	global from_state_belief,target_belief
@@ -353,14 +348,17 @@ flip_trans_again()
 
 print "Transition Matrix: "
 print trans_mat_unknown
-trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
-print "Normalized:\n",trans_mat_unknown	
 
+for i in range(0,action_size):
+	print "Trans Mat Sum:", trans_mat_unknown[i].sum()
+	trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
+print "Normalized:\n",trans_mat_unknown	
 
 print "Actual transition matrix:" , trans_mat
 
 
 print "Lamda Vector:", lamda_vector
+
 
 
 

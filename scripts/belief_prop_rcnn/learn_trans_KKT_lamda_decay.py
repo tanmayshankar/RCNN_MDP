@@ -345,7 +345,11 @@ flip_trans_again()
 
 print "Transition Matrix: "
 print trans_mat_unknown
-trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
+
+for i in range(0,action_size):
+	print "Trans Mat Sum:", trans_mat_unknown[i].sum()
+	trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
+# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
 print "Normalized:\n",trans_mat_unknown	
 
 

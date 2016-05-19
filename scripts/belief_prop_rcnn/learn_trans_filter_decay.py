@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import numpy as npy
 import matplotlib.pyplot as plt
-import rospy
 import sys
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt 
@@ -68,8 +67,9 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
-learning_rate = 0.05 * npy.ones(action_size)
-annealing_rate = (learning_rate[0]/5)/time_limit
+# learning_rate = 0.05 * npy.ones(action_size)
+learning_rate = 0.05
+annealing_rate = (8*(learning_rate/5))/time_limit 
 learning_rate_obs = 0.01
 annealing_rate_obs = (learning_rate/5)/time_limit
 time_count = npy.zeros(action_size)
@@ -330,8 +330,9 @@ def back_prop_trans(action_index,time_index):
 	# loss = npy.zeros(shape=(transition_space,transition_space))
 	# alpha = learning_rate - annealing_rate * time_index
 	time_count[action_index] +=1
-	learning_rate[action_index] -= annealing_rate*time_count[action_index]
-	alpha = learning_rate[action_index]
+	# learning_rate[action_index] -= annealing_rate*time_count[action_index]
+	alpha = learning_rate - annealing_rate*time_count[action_index]
+	# alpha = learning_rate[action_index]
 	# alpha = learning_rate[]
 	# alpha = learning_rate
 	lamda = 1.
@@ -351,6 +352,7 @@ def back_prop_trans(action_index,time_index):
 							# loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
 			
 			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
+			loss_1 += 0. * (trans_mat_unknown[action_index,:,:].sum() - 1.)
 			# if (temp>=0)and(temp<=1):
 			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
 				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
