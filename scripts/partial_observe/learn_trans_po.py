@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import numpy as npy
 import matplotlib.pyplot as plt
-import rospy
 import sys
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt 
@@ -11,9 +10,7 @@ from matplotlib.pyplot import *
 from scipy import signal
 import copy
 
-
-###### DEFINITIONS
-
+##### DEFINITIONS
 basis_size = 3
 discrete_size = 50
 
@@ -31,7 +28,6 @@ time_limit = 500
 bucket_space = npy.zeros((action_size,transition_space**2))
 cummulative = npy.zeros(action_size)
 bucket_index = 0
-# time_limit = 500
 
 obs_bucket_space = npy.zeros(obs_space**2)
 obs_bucket_index =0 
@@ -50,12 +46,12 @@ gamma = 0.95
 trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
 trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
 
-
 #### DEFINING STATE BELIEF VARIABLES
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 target_belief = npy.zeros(shape=(discrete_size,discrete_size))
 corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
+
 #### DEFINING EXTENDED STATE BELIEFS 
 w = transition_space/2
 to_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
@@ -63,7 +59,6 @@ from_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
 
 #### DEFINING OBSERVATION RELATED VARIABLES
 observation_model = npy.zeros(shape=(obs_space,obs_space))
-obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
 observed_state = npy.zeros(2)
 
 state_counter = 0
@@ -73,9 +68,7 @@ learning_rate = 0.05
 annealing_rate = (learning_rate/5)/time_limit
 learning_rate_obs = 0.01
 annealing_rate_obs = (learning_rate/5)/time_limit
-
 norm_sum_bel=0.
-
 
 def initialize_state():
 	global current_pose, from_state_belief
@@ -83,7 +76,6 @@ def initialize_state():
 	from_state_belief[24,24]=1.
 	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
-
 
 def initialize_transitions():
 	global trans_mat
@@ -100,9 +92,6 @@ def initialize_transitions():
 	trans_mat_1/=trans_mat_1.sum()
  	trans_mat_2/=trans_mat_2.sum()
 
-	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
-	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
-	
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)
 	trans_mat[2] = npy.rot90(trans_mat_1,1)
@@ -115,25 +104,14 @@ def initialize_transitions():
 
 	print "Transition Matrices:\n",trans_mat
 
-	# for i in range(0,action_size):
-	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
-	# 	trans_mat[i] = npy.flipud(trans_mat[i])
-
-	
-
 def initialize_unknown_transitions():
 	global trans_mat_unknown
 
 	for i in range(0,transition_space):
-		for j in range(0,transition_space):
-	# 		trans_mat_unknown[:,i,j] = random.random()
+		for j in range(0,transition_space):	
 			trans_mat_unknown[:,i,j] = 1.
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
-
-def initialize_unknown_observation():
-	global obs_model_unknown
-	obs_model_unknown = obs_model_unknown/obs_model_unknown.sum()
 
 def initialize_observation():
 	global observation_model
@@ -147,22 +125,6 @@ def initialize_observation():
 
 def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief,current_pose
-
-	# print "From:"
-	# for i in range(20,30):
-	# 	print from_state_belief[50-i,20:30]
-	# # for i in range(1,50):
-	# # 	print from_state_belief[50-i,:]
-	# print "To:"
-	# for i in range(20,30):
-	# 	print to_state_belief[50-i,20:30]
-	# # for i in range(1,50):
-	# # 	print to_state_belief[50-i,:]
-	# print "Target:",
-	# for i in range(20,30):
-	# 	print target_belief[50-i,20:30]
-	# # for i in range(1,50):	
-	# # 	print target_belief[50-i,:]
 
 	print "From:"
 	for i in range(current_pose[0]-5,current_pose[0]+5):
@@ -180,11 +142,7 @@ def bayes_obs_fusion():
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
 	h = obs_space/2
 	for i in range(-h,h+1):
-		for j in range(-h,h+1):
-			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[obs_space/2+i,obs_space/2+j]
-			##MUST INVOKE THE UNKNOWN OBVS
-			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[obs_space/2+i,obs_space/2+j]
-			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[h+i,h+j]
+		for j in range(-h,h+1):		
 			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 	norm_sum_bel = dummy.sum()
@@ -236,9 +194,8 @@ def initialize_obs_model_bucket():
 
 def initialize_all():
 	initialize_state()
-	initialize_observation()
+	# initialize_observation()
 	initialize_transitions()
-	initialize_unknown_observation()
 	initialize_unknown_transitions()
 	initialize_model_bucket()
 	initialize_obs_model_bucket()
@@ -351,30 +308,6 @@ def back_prop_trans(action_index,time_index):
 			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
 				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
 
-	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
-def back_prop_obs(action_index,time_index):
-	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief, corr_to_state_belief, norm_sum_bel
-	alpha = learning_rate_obs - annealing_rate_obs * time_index
-	h = obs_space/2
-
-	for m in range(-h,h+1):
-		for n in range(-h,h+1):
-			loss_1 =0.
-			# if (observed_state[0]+m>=0):
-			# 	print "A. "
-			# if (observed_state[0]+m<discrete_size):
-			# 	print "B. "
-			# if (observed_state[1]+n<discrete_size):
-			# 	print "C. "
-			# if (observed_state[1]+n>=0):
-			# 	print "D. "
-
-			if (observed_state[0]+m>=0)and(observed_state[0]+m<discrete_size)and(observed_state[1]+n<discrete_size)and(observed_state[1]+n>=0):
-				loss_1 = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
-
-			if (obs_model_unknown[h+m,h+n]-alpha*loss_1>=0)and(obs_model_unknown[h+m,h+n]-alpha*loss_1<1):
-				obs_model_unknown[h+m,h+n] -= alpha * loss_1
-
 def recurrence():
 	global from_state_belief,target_belief
 	from_state_belief = copy.deepcopy(target_belief)
@@ -411,7 +344,6 @@ def input_actions():
 
 input_actions()
 
-
 def flip_trans_again():
 	for i in range(0,action_size):
 		trans_mat_unknown[i] = npy.fliplr(trans_mat_unknown[i])
@@ -421,24 +353,13 @@ flip_trans_again()
 
 print "Learnt Transition Model:\n", trans_mat_unknown
 
-# for i in range(0,8):
-# 	print trans_mat_unknown[i].sum()
-
 for i in range(0,8):
 	trans_mat_unknown[i,:,:] /= trans_mat_unknown[i,:,:].sum()
 print "Normalized Transition Model:\n",trans_mat_unknown	
 
 print "Actual Transition Model:\n" , trans_mat
 
-print "Learnt Observation Model:\n", obs_model_unknown
-obs_model_unknown/=obs_model_unknown.sum()
-print "Normalized Observation Model:\n", obs_model_unknown
-
-
-
-
 ######TO RUN FEEDFORWARD PASSES OF THE RECURRENT CONV NET.#########
-
 def conv_layer():	
 	global value_function
 	global trans_mat
@@ -450,7 +371,6 @@ def conv_layer():
 	
 	#Max pooling over actions. 
 	value_function = gamma*npy.amax(action_value_layers,axis=0)
-	# layer_value = gamma*npy.amax(action_value_layers,axis=0)
 	print "The next value function.",value_function
 	optimal_policy[:,:] = npy.argmax(action_value_layers,axis=0)
 	# return layer_value
@@ -478,13 +398,3 @@ with file('estimated_transition.txt','w') as outfile:
 	for data_slice in trans_mat_unknown:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
-
-with file('estimated_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,obs_model_unknown,fmt='%-7.2f')
-
-with file('actual_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,observation_model,fmt='%-7.2f')

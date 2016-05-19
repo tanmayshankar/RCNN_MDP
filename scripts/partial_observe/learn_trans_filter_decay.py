@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import numpy as npy
 import matplotlib.pyplot as plt
-import rospy
 import sys
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt 
@@ -13,7 +12,6 @@ import copy
 
 
 ###### DEFINITIONS
-
 basis_size = 3
 discrete_size = 50
 
@@ -56,6 +54,7 @@ to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 target_belief = npy.zeros(shape=(discrete_size,discrete_size))
 corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
+
 #### DEFINING EXTENDED STATE BELIEFS 
 w = transition_space/2
 to_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
@@ -69,23 +68,17 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
-learning_rate = npy.zeros(action_size)
-learning_rate[:] = 0.05
-annealing_rate = (learning_rate[0]/5)/time_limit
-learning_rate_obs = 0.01
-annealing_rate_obs = (learning_rate/5)/time_limit
+learning_rate = 0.05
+annealing_rate = (learning_rate/5)/time_limit
 time_count = npy.zeros(action_size)
+lamda_vector = npy.zeros(action_size)
 
 norm_sum_bel=0.
 
-
 def initialize_state():
 	global current_pose, from_state_belief
-
 	from_state_belief[24,24]=1.
-	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
-
 
 def initialize_transitions():
 	global trans_mat
@@ -102,9 +95,6 @@ def initialize_transitions():
 	trans_mat_1/=trans_mat_1.sum()
  	trans_mat_2/=trans_mat_2.sum()
 
-	# trans_mat_1 = [[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]]
-	# trans_mat_2 = [[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]]
-	
 	trans_mat[0] = trans_mat_1
 	trans_mat[1] = npy.rot90(trans_mat_1,2)
 	trans_mat[2] = npy.rot90(trans_mat_1,1)
@@ -117,12 +107,6 @@ def initialize_transitions():
 
 	print "Transition Matrices:\n",trans_mat
 
-	# for i in range(0,action_size):
-	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
-	# 	trans_mat[i] = npy.flipud(trans_mat[i])
-
-	
-
 def initialize_unknown_transitions():
 	global trans_mat_unknown
 
@@ -132,10 +116,6 @@ def initialize_unknown_transitions():
 			trans_mat_unknown[:,i,j] = 1.
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
-
-def initialize_unknown_observation():
-	global obs_model_unknown
-	obs_model_unknown = obs_model_unknown/obs_model_unknown.sum()
 
 def initialize_observation():
 	global observation_model
@@ -149,22 +129,6 @@ def initialize_observation():
 
 def display_beliefs():
 	global from_state_belief,to_state_belief,target_belief,current_pose
-
-	# print "From:"
-	# for i in range(20,30):
-	# 	print from_state_belief[50-i,20:30]
-	# # for i in range(1,50):
-	# # 	print from_state_belief[50-i,:]
-	# print "To:"
-	# for i in range(20,30):
-	# 	print to_state_belief[50-i,20:30]
-	# # for i in range(1,50):
-	# # 	print to_state_belief[50-i,:]
-	# print "Target:",
-	# for i in range(20,30):
-	# 	print target_belief[50-i,20:30]
-	# # for i in range(1,50):	
-	# # 	print target_belief[50-i,:]
 
 	print "From:"
 	for i in range(current_pose[0]-5,current_pose[0]+5):
@@ -183,10 +147,6 @@ def bayes_obs_fusion():
 	h = obs_space/2
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
-			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[obs_space/2+i,obs_space/2+j]
-			##MUST INVOKE THE UNKNOWN OBVS
-			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[obs_space/2+i,obs_space/2+j]
-			# dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * obs_model_unknown[h+i,h+j]
 			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 	norm_sum_bel = dummy.sum()
@@ -194,7 +154,7 @@ def bayes_obs_fusion():
 def remap_indices(dummy_index):
 
 	#####action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
-	#####UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
+	#####    UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
 	if (dummy_index==0):
 		return 4
@@ -240,7 +200,6 @@ def initialize_all():
 	initialize_state()
 	initialize_observation()
 	initialize_transitions()
-	initialize_unknown_observation()
 	initialize_unknown_transitions()
 	initialize_model_bucket()
 	initialize_obs_model_bucket()
@@ -249,7 +208,6 @@ def construct_from_ext_state():
 	global from_state_ext, from_state_belief,discrete_size
 	d=discrete_size
 	from_state_ext[w:d+w,w:d+w] = copy.deepcopy(from_state_belief[:,:])
-	# from_state_ext[2*w:d+2*w,2*w:d+2*w] = from_state_belief[:,:]
 
 def belief_prop_extended(action_index):
 	global trans_mat_unknown, from_state_ext, to_state_ext, w, discrete_size
@@ -325,13 +283,8 @@ def belief_prop(action_index):
 def back_prop_trans(action_index,time_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, observation_model, observed_state, corr_to_state_belief, time_count
 
-	# loss = npy.zeros(shape=(transition_space,transition_space))
-	# alpha = learning_rate - annealing_rate * time_index
 	time_count[action_index] +=1
-	learning_rate[action_index] -= annealing_rate*time_count[action_index]
-	alpha = learning_rate[action_index]
-	# alpha = learning_rate[]
-	# alpha = learning_rate
+	alpha = learning_rate - annealing_rate * time_count[action_index]
 	lamda = 1.
 
 	w = transition_space/2
@@ -350,34 +303,11 @@ def back_prop_trans(action_index,time_index):
 							loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*observation_model[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
 							# loss_1 -= 2*(target_belief[i,j]-corr_to_state_belief[i,j])*obs_model_unknown[h+i-observed_state[0],h+j-observed_state[1]] * from_state_belief[i-m,j-n] 
 			
-			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
-			# if (temp>=0)and(temp<=1):
+			loss_1 += lamda_vector[action_index] * (trans_mat_unknown[action_index,:,:].sum() - 1.)
+			lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
+
 			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
 				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
-
-	# trans_mat_unknown[action_index,:,:] /=trans_mat_unknown[action_index,:,:].sum()
-def back_prop_obs(action_index,time_index):
-	global obs_model_unknown, obs_space, to_state_belief, target_belief, from_state_belief, corr_to_state_belief, norm_sum_bel
-	alpha = learning_rate_obs - annealing_rate_obs * time_index
-	h = obs_space/2
-
-	for m in range(-h,h+1):
-		for n in range(-h,h+1):
-			loss_1 =0.
-			# if (observed_state[0]+m>=0):
-			# 	print "A. "
-			# if (observed_state[0]+m<discrete_size):
-			# 	print "B. "
-			# if (observed_state[1]+n<discrete_size):
-			# 	print "C. "
-			# if (observed_state[1]+n>=0):
-			# 	print "D. "
-
-			if (observed_state[0]+m>=0)and(observed_state[0]+m<discrete_size)and(observed_state[1]+n<discrete_size)and(observed_state[1]+n>=0):
-				loss_1 = - 2 * (target_belief[observed_state[0]+m,observed_state[1]+n]-corr_to_state_belief[observed_state[0]+m,observed_state[1]+n]) * to_state_belief[observed_state[0]+m,observed_state[1]+n] / norm_sum_bel
-
-			if (obs_model_unknown[h+m,h+n]-alpha*loss_1>=0)and(obs_model_unknown[h+m,h+n]-alpha*loss_1<1):
-				obs_model_unknown[h+m,h+n] -= alpha * loss_1
 
 def recurrence():
 	global from_state_belief,target_belief
@@ -396,7 +326,6 @@ def master(action_index, time_index):
 	simulated_observation_model()
 
 	back_prop_trans(action_index, time_index)
-	# back_prop_obs(action_index, time_index)
 	recurrence()	
 
 initialize_all()
@@ -410,11 +339,10 @@ def input_actions():
 		iterate+=1
 		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		print "Iteration:",iterate," Current pose:",current_pose," Observed State:",observed_state," Action:",action_index
+		print "Iteration:",iterate," Current pose:",current_pose,"Observed State:",observed_state," Action:",action_index
 		master(action_index, iterate)
 
 input_actions()
-
 
 def flip_trans_again():
 	for i in range(0,action_size):
