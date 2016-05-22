@@ -68,10 +68,10 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
-learning_rate = 1
+learning_rate = 0.05
 annealing_rate = 8*(learning_rate/5)/time_limit
 time_count = npy.zeros(action_size)
-lamda_vector = npy.zeros(action_size)
+lamda_vector = 0*npy.ones(action_size)
 
 norm_sum_bel=0.
 
@@ -313,11 +313,47 @@ def back_prop_conv(action_index, time_index):
 
 	grad_update = signal.convolve2d(sens_belief, intermed_bel, 'valid')
 	# print "GRAD UPDATE SHAPE:", grad_update.shape
-	trans_mat_unknown[action_index] += alpha*grad_update
+	
+	# for m in range(-w,w+1):
+	# 	for n in range(-w,w+1):
+	# 		if (trans_mat_unknown[action_index,w+m,w+n] + alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] + alpha*grad_update[w+m,w+n]<=1):
+	# 			trans_mat_unknown[action_index,w+m,w+n] += alpha*grad_update[w+m,w+n]
+
+	# trans_mat_unknown[action_index] += alpha*grad_update
 
 	# loss_1 = lamda_vector[action_index] * (trans_mat_unknown[action_index].sum() - 1.)
 	# trans_mat_unknown[action_index] -= alpha * loss_1
 	# lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
+
+def back_prop_conv_KKT(action_index, time_index):
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, lamda_vector, sens_belief
+
+	calc_intermed_bel()
+	calc_sensitivity()
+
+	w = transition_space/2
+	time_count[action_index] +=1
+	alpha = learning_rate - annealing_rate*time_count[action_index]
+
+	grad_update = -signal.convolve2d(sens_belief, intermed_bel, 'valid')
+	# print "GRAD UPDATE SHAPE:", grad_update
+					
+	grad_update[:,:] += lamda_vector[action_index]*(trans_mat_unknown[action_index,:,:].sum() - 1.)
+	# lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
+
+	for m in range(-w,w+1):
+		for n in range(-w,w+1):
+			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
+				trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
+
+	# for m in range(-w,w+1):
+	# 	for n in range(-w,w+1):
+	# 		if (trans_mat_unknown[action_index,w+m,w+n]<0):
+	# 			grad_update[w+m,w+n] -= trans_mat_unknown[action_index,w+m,w+n]
+	# 		if (trans_mat_unknown[action_index,w+m,w+n]>1):
+	# 			grad_update[w+m,w+n] += trans_mat_unknown[action_index,w+m,w+n] -1 
+
+	# trans_mat_unknown[action_index] -= alpha*grad_update
 
 def recurrence():
 	global from_state_belief,target_belief
@@ -335,7 +371,8 @@ def master(action_index, time_index):
 	simulated_model(action_index)
 	simulated_observation_model()
 
-	back_prop_conv(action_index, time_index)
+	# back_prop_conv(action_index,time_index)
+	back_prop_conv_KKT(action_index, time_index)
 	recurrence()	
 
 initialize_all()
@@ -372,9 +409,6 @@ print "Normalized Transition Model:\n",trans_mat_unknown
 
 print "Actual Transition Model:\n" , trans_mat
 
-print "Learnt Observation Model:\n", obs_model_unknown
-obs_model_unknown/=obs_model_unknown.sum()
-print "Normalized Observation Model:\n", obs_model_unknown
 
 
 
@@ -421,12 +455,3 @@ with file('estimated_transition.txt','w') as outfile:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
-with file('estimated_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,obs_model_unknown,fmt='%-7.2f')
-
-with file('actual_observation.txt','w') as outfile: 
-	# for data_slice in trans_mat_unknown:
-	outfile.write('#Observation Model.\n')
-	npy.savetxt(outfile,observation_model,fmt='%-7.2f')
