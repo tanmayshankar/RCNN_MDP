@@ -77,8 +77,13 @@ norm_sum_bel=0.
 
 def initialize_state():
 	global current_pose, from_state_belief
-	from_state_belief[24,24]=1.
 	current_pose=[24,24]
+	to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
+	from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
+	from_state_belief[24,24]=1.
+	target_belief = npy.zeros(shape=(discrete_size,discrete_size))
+	corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
+	intermed_bel = npy.zeros((discrete_size,discrete_size))
 
 def initialize_transitions():
 	global trans_mat
@@ -153,8 +158,8 @@ def bayes_obs_fusion():
 
 def remap_indices(dummy_index):
 
-	#####action_space = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
-	#####    UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
+	#####action_space = [ [-1,0] , [1,0] , [0,-1], [0,1] , [-1,-1] , [-1,1] , [1,-1]  , [1,1]]
+	#####                   UP,    DOWN,    LEFT,  RIGHT,  UPLEFT,   UPRIGHT, DOWNLEFT, DOWNRIGHT.
 
 	if (dummy_index==0):
 		return 4
@@ -342,19 +347,20 @@ def back_prop_conv_KKT(action_index, time_index):
 	grad_update[:,:] += lamda*(trans_mat_unknown[action_index,:,:].sum() - 1.)
 	# # lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
 
-	for m in range(-w,w+1):
-		for n in range(-w,w+1):
-			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
-				trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
+	# for m in range(-w,w+1):
+	# 	for n in range(-w,w+1):
+	# 		if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
+	# 			trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
 
-	# penalty = 1
+	penalty_sub = 1
+	penalty_super = 1
 
-	# # for m in range(-w,w+1):
-	# # 	for n in range(-w,w+1):
-	# # 		if (trans_mat_unknown[action_index,w+m,w+n]<0):
-	# # 			grad_update[w+m,w+n] -= penalty * trans_mat_unknown[action_index,w+m,w+n]
-	# # 		if (trans_mat_unknown[action_index,w+m,w+n]>1):
-	# # 			grad_update[w+m,w+n] += penalty * (trans_mat_unknown[action_index,w+m,w+n]-1)
+	for m in range(-w,w+1): 
+		for n in range(-w,w+1): 
+			if (trans_mat_unknown[action_index,w+m,w+n]<0): 
+				grad_update[w+m,w+n] -= penalty_sub 
+			if (trans_mat_unknown[action_index,w+m,w+n]>1): 
+				grad_update[w+m,w+n] += penalty_super 
 
 	# for m in range(-w,w+1):
 	# 	for n in range(-w,w+1):
@@ -363,7 +369,7 @@ def back_prop_conv_KKT(action_index, time_index):
 	# 		if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>1):
 	# 			grad_update[w+m,w+n] += penalty * (trans_mat_unknown[action_index,w+m,w+n]-1)
 
-	# trans_mat_unknown[action_index] -= alpha*grad_update
+	trans_mat_unknown[action_index] -= alpha*grad_update
 
 def recurrence():
 	global from_state_belief,target_belief
