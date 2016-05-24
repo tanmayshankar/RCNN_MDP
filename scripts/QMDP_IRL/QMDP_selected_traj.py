@@ -50,7 +50,6 @@ gamma = 0.95
 trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
 trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
 
-
 #### DEFINING STATE BELIEF VARIABLES
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
@@ -75,7 +74,6 @@ action = 'w'
 trans_mat = npy.loadtxt(str(sys.argv[1]))
 trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
 
-print trans_mat
 #### Remember, these are target Q values. We don't need to learn these. 
 # q_value_layers = npy.loadtxt(str(sys.argv[2]))
 # q_value_layers = q_value_layers.reshape((action_size,discrete_size,discrete_size))
@@ -111,9 +109,6 @@ def initialize_state():
 def initialize_observation():
 	global observation_model
 	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	# observation_model = npy.array([[0.05,0.1,0.05],[0.1,0.4,0.1],[0.05,0.1,0.05]])
-
 	# observation_model = npy.array([[0.,0.,0.02,0.,0.],[0.,0.03,0.05,0.03,0.],[0.02,0.05,0.6,0.05,0.02],[0.,0.03,0.05,0.03,0.],[0.,0.,0.02,0.,0.]])
 	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
 
@@ -180,13 +175,6 @@ def calc_softmax():
 
 	for act in range(0,action_size):
 		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
-
-# def dummy_softmax():
-# 	global qmdp_values, qmdp_values_softmax, action_size
-	
-# 	# for act in range(0,action_size):
-# 	qmdp_values_softmax = npy.zeros(action_size)
-# 	qmdp_values_softmax[npy.argmax(qmdp_values)]=1.
 
 def update_QMDP_values():
 	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import numpy as npy
 import matplotlib.pyplot as plt
-import rospy
+# import rospy
 import sys
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt 
+# import matplotlib.pyplot as plt 
 import random
 from scipy.stats import rankdata
 from matplotlib.pyplot import *
@@ -79,12 +79,12 @@ trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
 # q_value_layers = q_value_layers.reshape((action_size,discrete_size,discrete_size))
 
 q_value_estimate = npy.ones((action_size,discrete_size,discrete_size))
-q_value_layers = npy.zeros((action_size,discrete_size,discrete_size))
+# q_value_layers /= q_value_layers.sum()
 
 qmdp_values = npy.zeros(action_size)
 qmdp_values_softmax = npy.zeros(action_size)
 
-number_trajectories =7
+number_trajectories =47
 trajectory_length = 30
 
 trajectories = npy.loadtxt(str(sys.argv[2]))
@@ -101,9 +101,6 @@ time_limit = number_trajectories*trajectory_length
 learning_rate = 1
 annealing_rate = (learning_rate/5)/time_limit
 
-reward_estimate = npy.zeros((action_size,discrete_size,discrete_size))
-
-
 def flip_trans_mat():
 	global trans_mat, trans_mat_flip
 	for i in range(0,action_size):
@@ -118,8 +115,7 @@ def initialize_state():
 def initialize_observation():
 	global observation_model
 	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	observation_model = npy.array([[0.05,0.1,0.05],[0.1,0.4,0.1],[0.05,0.1,0.05]])
+	observation_model = npy.array([[0.,0.05,0.],[0.05,1.6,0.05],[0.,0.05,0.]])
 
 	epsilon=0.0001
 	observation_model += epsilon
@@ -175,8 +171,7 @@ def belief_prop_extended(action_index):
 
 	to_state_belief[:,:] = copy.deepcopy(to_state_ext[w:d+w,w:d+w])
 
-# def feedforward_recurrence():
-def belief_recurrence():
+def feedforward_recurrence():
 	global from_state_belief, to_state_belief, corr_to_state_belief
 	# from_state_belief = copy.deepcopy(corr_to_state_belief)
 	from_state_belief = copy.deepcopy(to_state_belief)
@@ -184,18 +179,8 @@ def belief_recurrence():
 def calc_softmax():
 	global qmdp_values, qmdp_values_softmax
 
-	dummy_sum = npy.sum(npy.exp(qmdp_values),axis=0)
-
 	for act in range(0,action_size):
-		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / dummy_sum
-	print "Hello", qmdp_values_softmax
-
-def dummy_softmax():
-	global qmdp_values, qmdp_values_softmax, action_size
-	
-	# for act in range(0,action_size):
-	qmdp_values_softmax = npy.zeros(action_size)
-	qmdp_values_softmax[npy.argmax(qmdp_values)]=1.
+		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
 
 def update_QMDP_values():
 	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief
@@ -277,7 +262,7 @@ def master():
 	max_pool()
 	conv_layer()
 	update_q_estimate()
-	belief_recurrence()	
+	feedforward_recurrence()	
 
 	print observed_state, current_pose, target_actions, qmdp_values_softmax
 
