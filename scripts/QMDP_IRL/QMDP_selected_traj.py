@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 # import rospy
 import sys
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt 
+# import matplotlib.pyplot as plt 
 import random
 from scipy.stats import rankdata
 from matplotlib.pyplot import *
@@ -106,13 +106,16 @@ annealing_rate = (learning_rate/5)/time_limit
 def initialize_state():
 	# global current_pose, from_state_belief, observed_state
 	global observed_state
-	from_state_belief[observed_state[0],observed_state[1]] = 1.
+	from_state_belief[observed_state[0],observed_state[1]]=1.	
 
 def initialize_observation():
 	global observation_model
 	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
 	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	observation_model = npy.array([[0.05,0.1,0.05],[0.1,0.4,0.1],[0.05,0.1,0.05]])
+	# observation_model = npy.array([[0.05,0.1,0.05],[0.1,0.4,0.1],[0.05,0.1,0.05]])
+
+	# observation_model = npy.array([[0.,0.,0.02,0.,0.],[0.,0.03,0.05,0.03,0.],[0.02,0.05,0.6,0.05,0.02],[0.,0.03,0.05,0.03,0.],[0.,0.,0.02,0.,0.]])
+	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
 
 	epsilon=0.0001
 	observation_model += epsilon
@@ -178,12 +181,12 @@ def calc_softmax():
 	for act in range(0,action_size):
 		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
 
-def dummy_softmax():
-	global qmdp_values, qmdp_values_softmax, action_size
+# def dummy_softmax():
+# 	global qmdp_values, qmdp_values_softmax, action_size
 	
-	# for act in range(0,action_size):
-	qmdp_values_softmax = npy.zeros(action_size)
-	qmdp_values_softmax[npy.argmax(qmdp_values)]=1.
+# 	# for act in range(0,action_size):
+# 	qmdp_values_softmax = npy.zeros(action_size)
+# 	qmdp_values_softmax[npy.argmax(qmdp_values)]=1.
 
 def update_QMDP_values():
 	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief
@@ -242,7 +245,8 @@ def Inverse_Q_Learning():
 	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
 	time_index = 0
 	# for trajectory_index in range(0,number_trajectories):
-	selected_traj = npy.array([13,14,16])
+	selected_traj = npy.array([13])
+	# selected_traj = npy.array([13,14,16])
 	# selected_traj = npy.array([0,3,4,7,8,9,13,14,16,17,22,28,32,33,37,44])
 	# for trajectory_index in selected_traj:
 	for trajectory_index in range(0,number_trajectories):
@@ -258,9 +262,10 @@ def Inverse_Q_Learning():
 
 		imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 		# plt.show(block=False)
+		colorbar()
 		plt.show()
 		# plt.title('Trajectory Index: %i')
-		# colorbar()
+		
 		# draw()
 		# show() 
 
