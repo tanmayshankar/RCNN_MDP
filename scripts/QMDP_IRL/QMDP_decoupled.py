@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import numpy as npy
 import matplotlib.pyplot as plt
-# import rospy
 import sys
 from mpl_toolkits.mplot3d import Axes3D
-# import matplotlib.pyplot as plt 
 import random
 from scipy.stats import rankdata
 from matplotlib.pyplot import *
@@ -48,7 +46,7 @@ gamma = 0.95
 
 #### DEFINING TRANSITION RELATED VARIABLES
 trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
-trans_mat_flip = npy.zeros(shape=(action_size,transition_space,transition_space))
+trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
 
 #### DEFINING STATE BELIEF VARIABLES
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
@@ -79,8 +77,8 @@ trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
 # q_value_layers = q_value_layers.reshape((action_size,discrete_size,discrete_size))
 
 q_value_estimate = npy.ones((action_size,discrete_size,discrete_size))
-reward_estimate = npy.zeros((action_size,discrete_size,discrete_size))
-q_value_layers = npy.zeros((action_size,discrete_size,discrete_size))
+dummy_q = npy.ones((action_size,discrete_size,discrete_size))
+
 # q_value_layers /= q_value_layers.sum()
 
 qmdp_values = npy.zeros(action_size)
@@ -103,21 +101,16 @@ time_limit = number_trajectories*trajectory_length
 learning_rate = 1
 annealing_rate = (learning_rate/5)/time_limit
 
-def flip_trans_mat():
-	global trans_mat, trans_mat_flip
-	for i in range(0,action_size):
-		trans_mat_flip[i] = npy.fliplr(trans_mat[i])
-		trans_mat_flip[i] = npy.flipud(trans_mat[i])
-
 def initialize_state():
 	# global current_pose, from_state_belief, observed_state
 	global observed_state
-	from_state_belief[observed_state[0],observed_state[1]] = 1.
+	from_state_belief[observed_state[0],observed_state[1]]=1.	
 
 def initialize_observation():
 	global observation_model
 	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	observation_model = npy.array([[0.,0.05,0.],[0.05,1.6,0.05],[0.,0.05,0.]])
+	# observation_model = npy.array([[0.,0.,0.02,0.,0.],[0.,0.03,0.05,0.03,0.],[0.02,0.05,0.6,0.05,0.02],[0.,0.03,0.05,0.03,0.],[0.,0.,0.02,0.,0.]])
+	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
 
 	epsilon=0.0001
 	observation_model += epsilon
@@ -149,7 +142,6 @@ def bayes_obs_fusion():
 def initialize_all():
 	initialize_state()
 	initialize_observation()
-	flip_trans_mat()
 
 def construct_from_ext_state():
 	global from_state_ext, from_state_belief,discrete_size
@@ -194,55 +186,30 @@ def update_QMDP_values():
 # def IRL_backprop():
 def Q_backprop():
 	global to_state_belief, q_value_estimate, qmdp_values_softmax, learning_rate, annealing_rate
-	global trajectory_index, length_index, target_actions, time_index
+	global trajectory_index, length_index, target_actions, time_index, dummy_q
 
-	update_QMDP_values()
-	calc_softmax()
+	# update_QMDP_values()
+	# calc_softmax()
 	# dummy_softmax()
+
  
 	alpha = learning_rate - annealing_rate * time_index
+	# alpha = learning_rate
 
 	for act in range(0,action_size):
-		q_value_estimate[act,:,:] = q_value_estimate[act,:,:] - alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
+		# q_value_estimate[act,:,:] = q_value_estimate[act,:,:] - alpha*(0.125-target_actions[act])*from_state_belief[:,:]
+		dummy_q[act,:,:] -= alpha*(0.125-target_actions[act])*from_state_belief[:,:]
+		dummy_q[act] /= npy.amax(dummy_q[act])
 
-def reward_backprop():
-	global reward_estimate, qmdp_values_softmax, target_actions, from_state_belief
-	global time_index
 
-	update_QMDP_values()
-	calc_softmax()
-
-	alpha = learning_rate - annealing_rate*time_index
-
-	for act in range(0,action_size):
-		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * from_state_belief[:,:]
-
-def max_pool():
-	global q_value_estimate, value_function
-	value_function = npy.amax(q_value_estimate, axis=0)
-
-def update_q_estimate():
-	global reward_estimate, q_value_estimate
-
-	# for act in range(0,action_size):
-	# 	q_value_estimate[act] = reward_estimate[act] + q_value_layers[act]
-
-	q_value_estimate = reward_estimate + q_value_layers
-
-def conv_layer():	
-	global value_function, trans_mat_flip
-
-	for act in range(0,action_size):		
-		#Convolve with each transition matrix.
-		# action_value_layers[act]=signal.convolve2d(value_function,trans_mat[act],'same','fill',0)
-		q_value_layers[act]=signal.convolve2d(value_function,trans_mat_flip[act],'same','fill',0)
-	
-	#Fixed bias for reward. 
-	# action_reward_bias()
-	# value_function = gamma*npy.amax(q_value_layers,axis=0)
-
+		# print "Ello", alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
 def parse_data(traj_ind,len_ind):
 	global observed_state, trajectory_index, length_index, target_actions, current_pose, trajectories
+
+	# observed_state[:] = observed_trajectories[trajectory_index,length_index,:]
+	# target_actions[:] = 0
+	# target_actions[actions_taken[trajectory_index,length_index]] = 1
+	# current_pose[:] = trajectories[trajectory_index,length_index,:]
 
 	observed_state[:] = observed_trajectories[traj_ind,len_ind,:]
 	target_actions[:] = 0
@@ -253,59 +220,32 @@ def master(traj_ind, len_ind):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 	global trajectory_index, length_index
 
-	construct_from_ext_state()
-	belief_prop_extended(actions_taken[trajectory_index,length_index])	
-	# bayes_obs_fusion()
 	
+	construct_from_ext_state()
+	# belief_prop_extended(actions_taken[trajectory_index,length_index])
+	belief_prop_extended(actions_taken[traj_ind,len_ind])
+	
+	print observed_state, current_pose, target_actions, qmdp_values_softmax
+	# bayes_obs_fusion()
 	parse_data(traj_ind,len_ind)
 
-	# Q_backprop()
-	reward_backprop()
-	
-	# max_pool()
-	# conv_layer()
-	
-	update_q_estimate()
+	Q_backprop()
+	# display_beliefs()
 	feedforward_recurrence()	
 
-	print observed_state, current_pose, target_actions, qmdp_values_softmax
-
-	# construct_from_ext_state()
-	# # belief_prop_extended(actions_taken[trajectory_index,length_index])
-	# belief_prop_extended(actions_taken[traj_ind,len_ind])
-	# # bayes_obs_fusion()
-	
-	# parse_data(traj_ind,len_ind)
-
-	# Q_backprop()
-	# feedforward_recurrence()	
-
-
-# def Inverse_Q_Learning():
-# 	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
-# 	time_index = 0
-# 	for trajectory_index in range(0,number_trajectories):
-# 		for length_index in range(0,trajectory_length):			
-# 			if (from_state_belief.sum()>0):
-# 				master()
-# 				time_index += 1
-# 				print time_index
-# 			else: 
-# 				print "We've got a problem"
-
 def Inverse_Q_Learning():
-	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
+	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index, dummy_q
+	global q_value_estimate
 	time_index = 0
 	# for trajectory_index in range(0,number_trajectories):
 	selected_traj = npy.array([13])
 	# selected_traj = npy.array([13,14,16])
 	# selected_traj = npy.array([0,3,4,7,8,9,13,14,16,17,22,28,32,33,37,44])
 	# for trajectory_index in selected_traj:
-
-	# for trajectory_index in range(0,10):
 	for trajectory_index in range(0,number_trajectories):
 		parse_data(trajectory_index,0)
 		initialize_state()
+		dummy_q = npy.ones((action_size,discrete_size,discrete_size))
 		for length_index in range(0,trajectory_length):			
 			if (from_state_belief.sum()>0):
 				master(trajectory_index, length_index)
@@ -313,18 +253,26 @@ def Inverse_Q_Learning():
 				print time_index
 			else: 
 				print "We've got a problem"
-		
-		max_pool()
-		conv_layer()
+		q_value_estimate += dummy_q
 
+		imshow(dummy_q[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+		# plt.show(block=False)
+		colorbar()
+		plt.show()
+		# plt.title('Trajectory Index: %i')
+		
+		# imshow(dummy_q[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 		imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 		# plt.show(block=False)
 		colorbar()
 		plt.show()
+		# draw()
+		# show() 
 
 trajectory_index = 0
 length_index = 0
-# parse_data()
+parse_data(0,0)
 
 
 initialize_all()
