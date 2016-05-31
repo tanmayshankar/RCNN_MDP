@@ -224,13 +224,10 @@ def max_pool():
 def update_q_estimate():
 	global reward_estimate, q_value_estimate
 
-	# for act in range(0,action_size):
-	# 	q_value_estimate[act] = reward_estimate[act] + q_value_layers[act]
-
 	q_value_estimate = reward_estimate + q_value_layers
 
 def conv_layer():	
-	global value_function, trans_mat_flip
+	global value_function, trans_mat_flip, q_value_layers
 
 	for act in range(0,action_size):		
 		#Convolve with each transition matrix.
@@ -264,7 +261,7 @@ def master(traj_ind, len_ind):
 	
 	# max_pool()
 	# conv_layer()
-	
+
 	update_q_estimate()
 	feedforward_recurrence()	
 
@@ -293,6 +290,10 @@ def master(traj_ind, len_ind):
 # 			else: 
 # 				print "We've got a problem"
 
+def feedback():
+	max_pool()
+	conv_layer()
+
 def Inverse_Q_Learning():
 	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
 	time_index = 0
@@ -314,13 +315,12 @@ def Inverse_Q_Learning():
 			else: 
 				print "We've got a problem"
 		
-		max_pool()
-		conv_layer()
+		feedback()
 
-		imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
-		# plt.show(block=False)
-		colorbar()
-		plt.show()
+		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+		# # plt.show(block=False)
+		# colorbar()
+		# plt.show()
 
 trajectory_index = 0
 length_index = 0
@@ -339,4 +339,9 @@ Inverse_Q_Learning()
 with file('Q_Value_Estimate.txt','w') as outfile:
 	for data_slice in q_value_estimate:
 		outfile.write('#Q_Value_Estimate.\n')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+
+with file('Learnt_Reward.txt','w') as outfile:
+	for data_slice in reward_estimate:
+		outfile.write('#Reward_Estimate.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
