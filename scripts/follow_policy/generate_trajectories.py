@@ -3,10 +3,10 @@ import numpy as npy
 from scipy.stats import truncnorm
 import matplotlib.pyplot as plt
 import pylab as pl
-from std_msgs.msg import String
+# from std_msgs.msg import String
 import sys
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import random
 import copy
 from scipy.stats import rankdata
@@ -142,12 +142,14 @@ def simulated_model(action_index):
 
 def initialize_observation():
 	global observation_model
-	# observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
+	observation_model = npy.array([[0.,0.05,0.],[0.05,1.6,0.05],[0.,0.05,0.]])
 	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	observation_model = npy.array([[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]])
+	# observation_model = npy.array([[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]])
 	epsilon=0.0001
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
+
+	print observation_model
 
 def initialize_obs_model_bucket():
 	global obs_bucket_space, observation_model, obs_space, obs_cummulative
@@ -210,7 +212,8 @@ def follow_policy():
 
 		simulated_observation_model()
 		
-		current_trajectory = [[ax,ay]]
+		# current_trajectory = [[ax,ay]]
+		current_trajectory = [[current_pose[0], current_pose[1]]]
 		current_observed_trajectory = [[observed_state[0],observed_state[1]]] 
 		act_ind = optimal_policy[observed_state[0],observed_state[1]]
 		current_actions_taken = [act_ind]
@@ -218,8 +221,9 @@ def follow_policy():
 	
 		while (state_counter<max_path_length)and(current_pose!=max_val_location):
 			
-			simulated_observation_model()
 			simulated_model(act_ind)
+			simulated_observation_model()
+			
 			act_ind = optimal_policy[current_pose[0],current_pose[1]]
 			# print "The current pose is:",current_pose
 			# print "The observed state is:",observed_state
@@ -253,6 +257,8 @@ actions_taken.remove(actions_taken[0])
 print observed_trajectories
 
 print "The trajectories are as follows: ",trajectories
+
+print "The trans mats are as follows:", trans_mat
 
 with file('Trajectories.txt','w') as outfile:
 	# for data_slice in pairwise_value_func:
