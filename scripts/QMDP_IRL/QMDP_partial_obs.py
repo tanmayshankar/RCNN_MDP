@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import numpy as npy
 import matplotlib.pyplot as plt
-# import rospy
 import sys
 from mpl_toolkits.mplot3d import Axes3D
-# import matplotlib.pyplot as plt 
 import random
 from scipy.stats import rankdata
 from matplotlib.pyplot import *
@@ -22,7 +20,7 @@ action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
 
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
-obs_space = 5
+obs_space = 3
 h=obs_space/2
 time_limit = 500
 trajectory_index=0
@@ -105,16 +103,21 @@ annealing_rate = (learning_rate/5)/time_limit
 
 def initialize_state():
 	# global current_pose, from_state_belief, observed_state
-	global observed_state
-	from_state_belief[observed_state[0],observed_state[1]] = 1.
+	global observed_state, obs_space, h, observation_model, from_state_belief
+	
+	from_state_belief = npy.zeros((discrete_size,discrete_size))
+	# from_state_belief[observed_state[0],observed_state[1]] = 1.
+	for i in range(-h,h+1):
+		for j in range(-h,h+1):
+			from_state_belief[observed_state[0]+i,observed_state[1]+j] = observation_model[h+i,h+j]
 
 def initialize_observation():
 	global observation_model
 	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
+	observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
 	# observation_model = npy.array([[0.05,0.1,0.05],[0.1,0.4,0.1],[0.05,0.1,0.05]])
 
-	observation_model = npy.array([[0.,0.,0.02,0.,0.],[0.,0.03,0.05,0.03,0.],[0.02,0.05,0.6,0.05,0.02],[0.,0.03,0.05,0.03,0.],[0.,0.,0.02,0.,0.]])
+	# observation_model = npy.array([[0.,0.,0.02,0.,0.],[0.,0.03,0.05,0.03,0.],[0.02,0.05,0.6,0.05,0.02],[0.,0.03,0.05,0.03,0.],[0.,0.,0.02,0.,0.]])
 
 	epsilon=0.0001
 	observation_model += epsilon
@@ -144,8 +147,8 @@ def bayes_obs_fusion():
 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())	
 
 def initialize_all():
-	initialize_state()
 	initialize_observation()
+	initialize_state()
 
 def construct_from_ext_state():
 	global from_state_ext, from_state_belief,discrete_size
@@ -168,11 +171,6 @@ def belief_prop_extended(action_index):
 		to_state_ext[:,d+2*w-i-1]=0
 
 	to_state_belief[:,:] = copy.deepcopy(to_state_ext[w:d+w,w:d+w])
-
-def feedforward_recurrence():
-	global from_state_belief, to_state_belief, corr_to_state_belief
-	# from_state_belief = copy.deepcopy(corr_to_state_belief)
-	from_state_belief = copy.deepcopy(to_state_belief)
 
 def calc_softmax():
 	global qmdp_values, qmdp_values_softmax
@@ -215,18 +213,23 @@ def parse_data(traj_ind,len_ind):
 	target_actions[:] = 0
 	target_actions[actions_taken[traj_ind,len_ind]] = 1
 	current_pose[:] = trajectories[traj_ind,len_ind,:]
+	print observed_state
+
+def feedforward_recurrence():
+	global from_state_belief, to_state_belief, corr_to_state_belief
+	from_state_belief = copy.deepcopy(corr_to_state_belief)
+	# from_state_belief = copy.deepcopy(to_state_belief)
 
 def master(traj_ind, len_ind):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 	global trajectory_index, length_index
 
-	
 	construct_from_ext_state()
 	# belief_prop_extended(actions_taken[trajectory_index,length_index])
 	belief_prop_extended(actions_taken[traj_ind,len_ind])
 	
 	print observed_state, current_pose, target_actions, qmdp_values_softmax
-	# bayes_obs_fusion()
+	bayes_obs_fusion()
 	parse_data(traj_ind,len_ind)
 
 	Q_backprop()
@@ -234,22 +237,28 @@ def master(traj_ind, len_ind):
 	feedforward_recurrence()	
 
 def Inverse_Q_Learning():
-	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
+	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index, from_state_belief
 	time_index = 0
 	# for trajectory_index in range(0,number_trajectories):
 	selected_traj = npy.array([13,14,16])
 	# selected_traj = npy.array([0,3,4,7,8,9,13,14,16,17,22,28,32,33,37,44])
-	# for trajectory_index in selected_traj:
-	for trajectory_index in range(0,number_trajectories):
+	for trajectory_index in selected_traj:
+	# for trajectory_index in range(0,number_trajectories):
 		parse_data(trajectory_index,0)
 		initialize_state()
+
+		print npy.unravel_index(from_state_belief.argmax(),from_state_belief.shape)
+
 		for length_index in range(0,trajectory_length):			
 			if (from_state_belief.sum()>0):
 				master(trajectory_index, length_index)
 				time_index += 1
-				print time_index
+				print "Time index: ", time_index, "Trajectory:", trajectory_index, "Step:", length_index
+
+				# print "No problem"
 			else: 
 				print "We've got a problem"
+				print "Time index: ", time_index, "Trajectory: ", trajectory_index, "Step:", length_index
 
 		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 		# # plt.show(block=False)
