@@ -24,7 +24,7 @@ observed_trajectories = [[[0,0],[1,2],[3,4]]]
 actions_taken = [[0,0]]
 
 trans_mat_1 = npy.loadtxt(str(sys.argv[3]))
-trans_mat_1 = trans_mat_1.reshape((action_size,transition_space,transition_space))
+trans_mat_1 = trans_mat_1.reshape((action_size-1,transition_space,transition_space))
 trans_mat = npy.zeros((action_size,transition_space,transition_space))
 
 for i in range(0,action_size-1):
@@ -228,7 +228,7 @@ def follow_policy():
 		current_trajectory = [[current_pose[0], current_pose[1]]]
 		current_observed_trajectory = [[observed_state[0],observed_state[1]]] 
 		act_ind = optimal_policy[observed_state[0],observed_state[1]]
-		current_actions_taken = [0]
+		current_actions_taken = [act_ind]
 		state_counter=1
 	
 		while (state_counter<max_path_length)and(current_pose!=max_val_location):
@@ -255,7 +255,7 @@ def follow_policy():
 		demo_counter+=1
 		print demo_counter
 
-		current_actions_taken.remove(current_actions_taken[0])
+		# current_actions_taken.remove(current_actions_taken[0])
 		trajectories.append(current_trajectory)
 		observed_trajectories.append(current_observed_trajectory)
 		actions_taken.append(current_actions_taken)
