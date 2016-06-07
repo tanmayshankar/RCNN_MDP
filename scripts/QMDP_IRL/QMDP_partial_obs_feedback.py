@@ -118,13 +118,18 @@ def display_beliefs():
 def bayes_obs_fusion():
 	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief
 	
-	intermediate_belief = npy.zeros((discrete_size,discrete_size))
+	
 	h = obs_space/2
+	intermediate_belief = npy.zeros((discrete_size+2*h,discrete_size+2*h))
+	ext_to_bel = npy.zeros((discrete_size+2*h,discrete_size+2*h))
+	ext_to_bel[h:discrete_size+h,h:discrete_size+h] = copy.deepcopy(to_state_belief[:,:])
+
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
-			intermediate_belief[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
+			intermediate_belief[h+observed_state[0]+i,h+observed_state[1]+j] = ext_to_bel[h+observed_state[0]+i,h+observed_state[1]+j] * observation_model[h+i,h+j]
 	
-	corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[:,:])
+	# corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[:,:])
+	corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[h:h+discrete_size,h:h+discrete_size])
 	corr_to_state_belief /= corr_to_state_belief.sum()
 
 	if (intermediate_belief.sum()==0):
@@ -258,7 +263,7 @@ def Inverse_Q_Learning():
 	time_index = 0
 	
 	for trajectory_index in range(0,number_trajectories):
-	# for trajectory_index in range(0,3):
+	# for trajectory_index in range(0,25):
 		
 		parse_data(trajectory_index,0)
 		initialize_state()
@@ -291,3 +296,7 @@ with file('Q_Value_Estimate.txt','w') as outfile:
 	for data_slice in q_value_estimate:
 		outfile.write('#Q_Value_Estimate.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+
+with file('Value_function_estimate.txt','w') as outfile:
+	outfile.write('#Value_function_estimate.\n')
+	npy.savetxt(outfile,value_function,fmt='%-7.2f')
