@@ -58,15 +58,15 @@ To watch an agent follow the optimal policy from a random position, with the lea
 
 To generate multiple trajectories of an agent following the optimal policy from a random position, run: 
 
-`./scripts/follow_policy/generate_trajectories.py data/trials/VI_trials/trial_8_bounded/output_policy.txt data/trials/VI_trials/trial_8_bounded/output_policy.txt data/learnt_models/actual_transition.txt`
+`./scripts/follow_policy/generate_trajectories_extended.py data/trials/VI_trials/trial_8_bounded/output_policy.txt data/trials/VI_trials/trial_8_bounded/reward_function.txt data/learnt_models/actual_transition.txt`
 
 **Inverse Reinforcement Learning**
 
 To learn reward functions in an Inverse Reinforcement Learning setting using the QMDP RCNN, the following codes are used. 
 For the fully observable setting, run: 
 
-`./scripts/QMDP_IRL/QMDP_selected_traj.py data/learnt_models/actual_transition.txt data/trials/QMDP_trials/trial_15_sync/Trajectories.txt data/trials/QMDP_trials/trial_15_sync/Observed_Trajectories.txt data/trials/QMDP_trials/trial_15_sync/Actions_Taken.txt`
+`./scripts/QMDP_IRL/QMDP_selected_traj.py data/learnt_models/actual_transition.txt data/trials/QMDP_IRL_trials/trial_2/Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Observed_Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Actions_Taken.txt`
 
 For the partially observable setting, run: 
 
-`./scripts/QMDP_IRL/QMDP_partial_obs.py data/learnt_models/actual_transition.txt data/trials/QMDP_trials/trial_15_sync/Trajectories.txt data/trials/QMDP_trials/trial_15_sync/Observed_Trajectories.txt data/trials/QMDP_trials/trial_15_sync/Actions_Taken.txt`
+`./scripts/QMDP_IRL/QMDP_partial_obs_feedback.py data/learnt_models/actual_transition.txt data/trials/QMDP_IRL_trials/trial_2/Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Observed_Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Actions_Taken.txt`
