@@ -60,6 +60,8 @@ To generate multiple trajectories of an agent following the optimal policy from 
 
 `./scripts/follow_policy/generate_trajectories.py data/trials/VI_trials/trial_8_bounded/output_policy.txt data/trials/VI_trials/trial_8_bounded/output_policy.txt data/learnt_models/actual_transition.txt`
 
+**Inverse Reinforcement Learning**
+
 To learn reward functions in an Inverse Reinforcement Learning setting using the QMDP RCNN, the following codes are used. 
 For the fully observable setting, run: 
 
