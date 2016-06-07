@@ -16,11 +16,6 @@ action_size = 9
 action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1],[0,0]])
 ## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT, NOTHING.
 
-# #Action size also determines number of convolutional filters. 
-# action_size = 8
-# action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
-# ## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
-
 #Transition space size determines size of convolutional filters. 
 transition_space = 3
 obs_space = 3
@@ -176,18 +171,18 @@ def update_QMDP_values():
 		# qmdp_values[act] = npy.sum(q_value_estimate[act]*to_state_belief)
 		qmdp_values[act] = npy.sum(q_value_estimate[act]*from_state_belief)
 
-# def IRL_backprop():
-def Q_backprop():
-	global to_state_belief, q_value_estimate, qmdp_values_softmax, learning_rate, annealing_rate
-	global trajectory_index, length_index, target_actions, time_index
+# # def IRL_backprop():
+# def Q_backprop():
+# 	global to_state_belief, q_value_estimate, qmdp_values_softmax, learning_rate, annealing_rate
+# 	global trajectory_index, length_index, target_actions, time_index
 
-	update_QMDP_values()
-	calc_softmax()
+# 	update_QMDP_values()
+# 	calc_softmax()
  
-	alpha = learning_rate - annealing_rate * time_index
+# 	alpha = learning_rate - annealing_rate * time_index
 
-	for act in range(0,action_size):
-		q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
+# 	for act in range(0,action_size):
+# 		q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
 
 def reward_backprop():
 	global reward_estimate, qmdp_values_softmax, target_actions, from_state_belief
@@ -200,8 +195,6 @@ def reward_backprop():
 
 	for act in range(0,action_size):
 		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * from_state_belief[:,:]
-
-
 
 def belief_prop(traj_ind,len_ind):
 	construct_from_ext_state()
@@ -233,7 +226,6 @@ def conv_layer():
 	global value_function, q_value_layers
 	trans_mat_flip = copy.deepcopy(trans_mat)
 
-
 	for act in range(0,action_size):		
 		#Convolve with each transition matrix.
 		# action_value_layers[act]=signal.convolve2d(value_function,trans_mat[act],'same','fill',0)
@@ -247,12 +239,11 @@ def master(traj_ind, len_ind):
 	parse_data(traj_ind,len_ind)
 	belief_prop(traj_ind,len_ind)
 	bayes_obs_fusion()
-	# Q_backprop()
 	reward_backprop()
 	update_q_estimate()
 	feedforward_recurrence()	
 
-	print "OS:", observed_state, "CP:", current_pose, "TA:", target_actions, "SM:", qmdp_values_softmax
+	# print "OS:", observed_state, "CP:", current_pose, "TA:", target_actions, "SM:", qmdp_values_softmax
 
 def feedback():
 	max_pool()
@@ -273,20 +264,20 @@ def Inverse_Q_Learning():
 			if (from_state_belief.sum()>0):
 				master(trajectory_index, length_index)
 				time_index += 1
-				print "Time index: ", time_index, "Trajectory:", trajectory_index, "Step:", length_index
+				print "Trajectory:", trajectory_index, "Step:", length_index
 			else: 
 				print "WARNING: Belief sum below 0."
-				print "Time index: ", time_index, "Trajectory: ", trajectory_index, "Step:", length_index
+				print "Trajectory: ", trajectory_index, "Step:", length_index
 
 		feedback()
 
-		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
-		# # plt.show(block=False)
-		# plt.show()
-		# # plt.title('Trajectory Index: %i')
-		# # colorbar()
-		# # draw()
-		# # show() 
+		imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+		# plt.show(block=False)
+		colorbar()
+		plt.show()
+		# plt.title('Trajectory Index: %i')
+		# draw()
+		# show() 
 
 parse_data(0,0)
 initialize_all()
