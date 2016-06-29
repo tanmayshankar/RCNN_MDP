@@ -56,6 +56,7 @@ print trans_mat
 q_value_estimate = npy.ones((action_size,discrete_size,discrete_size))
 reward_estimate = npy.zeros((action_size,discrete_size,discrete_size))
 q_value_layers = npy.zeros((action_size,discrete_size,discrete_size))
+value_function = npy.zeros((discrete_size,discrete_size))
 
 qmdp_values = npy.zeros(action_size)
 qmdp_values_softmax = npy.zeros(action_size)
@@ -77,6 +78,8 @@ belief_target_actions = npy.zeros(action_size)
 time_limit = number_trajectories*trajectory_length
 learning_rate = 0.5
 annealing_rate = (learning_rate/5)/time_limit
+
+
 
 from_belief_vector = npy.zeros((trajectory_length, discrete_size, discrete_size))
 
@@ -214,7 +217,7 @@ def belief_reward_backprop():
 		
 		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-belief_target_actions[act]) * backprop_belief[:,:]
 
-		print "Action: ", act, "Thing: ", (qmdp_values_softmax[act]-belief_target_actions[act])
+		# print "Action: ", act, "Thing: ", (qmdp_values_softmax[act]-belief_target_actions[act])
 		# print "Trying:"
 		# for i in range(0,50):
 		# 	print backprop_belief[i]
@@ -291,8 +294,11 @@ def Inverse_Q_Learning():
 	global number_trajectories, time_index, from_state_belief, from_belief_vector
 	time_index = 0
 	
-	for trajectory_index in range(0,number_trajectories):
-	# for trajectory_index in range(0,25):
+	traj_index_list = range(0,number_trajectories)
+	
+	while traj_index_list:
+		
+		trajectory_index = random.choice(traj_index_list)
 		
 		from_belief_vector = npy.zeros((trajectory_length,discrete_size,discrete_size))
 		index_list = range(0,trajectory_length-1)
@@ -316,7 +322,9 @@ def Inverse_Q_Learning():
 			backprop()
 			index_list.remove(length_index)
 
-		# feedback()
+		feedback()
+
+		traj_index_list.remove(trajectory_index)
 
 		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 		# # plt.show(block=False)
@@ -325,6 +333,41 @@ def Inverse_Q_Learning():
 		# # plt.title('Trajectory Index: %i')
 		# # draw()
 		# # show() 
+
+	# for trajectory_index in range(0,number_trajectories):
+	# # for trajectory_index in range(0,25):
+		
+	# 	from_belief_vector = npy.zeros((trajectory_length,discrete_size,discrete_size))
+	# 	index_list = range(0,trajectory_length-1)
+
+	# 	parse_data(trajectory_index,0)
+	# 	initialize_state()
+
+	# 	for length_index in range(0,trajectory_length-1):			
+			
+	# 		if (from_state_belief.sum()>0):
+	# 			master(trajectory_index, length_index)
+	# 			time_index += 1
+	# 			print "Trajectory:", trajectory_index, "Step:", length_index
+	# 		else: 
+	# 			print "WARNING: Belief sum below 0."
+	# 			print "Trajectory: ", trajectory_index, "Step:", length_index
+
+	# 	while index_list:
+	# 		length_index = random.choice(index_list)
+	# 		parse_backprop_index(trajectory_index, length_index)
+	# 		backprop()
+	# 		index_list.remove(length_index)
+
+	# 	feedback()
+
+	# 	# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+	# 	# # plt.show(block=False)
+	# 	# colorbar()
+	# 	# plt.show()
+	# 	# # plt.title('Trajectory Index: %i')
+	# 	# # draw()
+	# 	# # show() 
 
 parse_data(0,0)
 initialize_all()
@@ -345,12 +388,13 @@ with file('Q_Value_Estimate.txt','w') as outfile:
 		outfile.write('#Q_Value_Estimate.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
-# with file('Value_Function_Estimate.txt','w') as outfile:
-# 	outfile.write('#Value_Function_Estimate.\n')
-# 	npy.savetxt(outfile,value_function,fmt='%-7.2f')
-
 with file('Reward_Function_Estimate.txt','w') as outfile:
 	for data_slice in reward_estimate:
 		outfile.write('#Reward_Function_Estimate.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
+max_pool()
+
+with file('Value_Function_Estimate.txt','w') as outfile:
+	outfile.write('#Value_Function_Estimate.\n')
+	npy.savetxt(outfile,value_function,fmt='%-7.2f')
