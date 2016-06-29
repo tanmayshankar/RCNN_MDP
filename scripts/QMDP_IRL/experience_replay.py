@@ -29,6 +29,8 @@ npy.set_printoptions(precision=3)
 to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
 corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
+backprop_belief = npy.zeros((discrete_size,discrete_size))
+
 #### DEFINING EXTENDED STATE BELIEFS 
 w = transition_space/2
 to_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
@@ -59,7 +61,7 @@ qmdp_values = npy.zeros(action_size)
 qmdp_values_softmax = npy.zeros(action_size)
 
 number_trajectories = 47
-trajectory_length = 40
+trajectory_length = 30
 
 trajectories = npy.loadtxt(str(sys.argv[2]))
 trajectories = trajectories.reshape((number_trajectories,trajectory_length,2))
@@ -74,6 +76,8 @@ target_actions = npy.zeros(action_size)
 time_limit = number_trajectories*trajectory_length
 learning_rate = 1
 annealing_rate = (learning_rate/5)/time_limit
+
+from_belief_vector = npy.zeros((trajectory_length, discrete_size, discrete_size))
 
 def initialize_state():
 	# global current_pose, from_state_belief, observed_state
@@ -129,7 +133,7 @@ def bayes_obs_fusion():
 
 	if (intermediate_belief.sum()==0):
 		print "Something's wrong."
-		display_beliefs()
+		# display_beliefs()
 		print npy.unravel_index(from_state_belief.argmax(),from_state_belief.shape)
 
 def initialize_all():
@@ -164,38 +168,48 @@ def calc_softmax():
 	for act in range(0,action_size):
 		qmdp_values_softmax[act] = npy.exp(qmdp_values[act]) / npy.sum(npy.exp(qmdp_values), axis=0)
 
-def update_QMDP_values():
-	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief
+# def update_QMDP_values():
+# 	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief
+
+# 	for act in range(0,action_size):
+# 		# qmdp_values[act] = npy.sum(q_value_estimate[act]*to_state_belief)
+# 		qmdp_values[act] = npy.sum(q_value_estimate[act]*from_state_belief)
+
+def belief_update_QMDP_values():
+	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief, backprop_belief
 
 	for act in range(0,action_size):
 		# qmdp_values[act] = npy.sum(q_value_estimate[act]*to_state_belief)
-		qmdp_values[act] = npy.sum(q_value_estimate[act]*from_state_belief)
+		# qmdp_values[act] = npy.sum(q_value_estimate[act]*from_state_belief)
+		qmdp_values[act] = npy.sum(q_value_estimate[act]*backprop_belief)
 
-# # def IRL_backprop():
-# def Q_backprop():
-# 	global to_state_belief, q_value_estimate, qmdp_values_softmax, learning_rate, annealing_rate
-# 	global trajectory_index, length_index, target_actions, time_index
+# def reward_backprop():
+# 	global reward_estimate, qmdp_values_softmax, target_actions, from_state_belief
+# 	global time_index
 
 # 	update_QMDP_values()
 # 	calc_softmax()
- 
-# 	alpha = learning_rate - annealing_rate * time_index
+
+# 	# alpha = learning_rate - annealing_rate*time_index
+# 	alpha = learning_rate
 
 # 	for act in range(0,action_size):
-# 		q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
+# 		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * from_state_belief[:,:]
 
-def reward_backprop():
+def belief_reward_backprop():
 	global reward_estimate, qmdp_values_softmax, target_actions, from_state_belief
-	global time_index
+	global time_index, backprop_belief
 
-	update_QMDP_values()
+	# update_QMDP_values()
+	belief_update_QMDP_values()
 	calc_softmax()
 
 	# alpha = learning_rate - annealing_rate*time_index
 	alpha = learning_rate
 
 	for act in range(0,action_size):
-		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * from_state_belief[:,:]
+		# reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * from_state_belief[:,:]
+		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * backprop_belief[:,:]
 
 def belief_prop(traj_ind,len_ind):
 	construct_from_ext_state()
@@ -209,6 +223,11 @@ def parse_data(traj_ind,len_ind):
 	target_actions[:] = 0
 	target_actions[actions_taken[traj_ind,len_ind]] = 1
 	current_pose[:] = trajectories[traj_ind,len_ind,:]
+
+def parse_backprop_index(traj_ind,len_ind):
+	global observed_state, target_actions, current_pose, trajectories, actions_taken
+
+	backprop_belief = from_belief_vector[len_ind]
 
 def feedforward_recurrence():
 	global from_state_belief, to_state_belief, corr_to_state_belief
@@ -233,6 +252,15 @@ def conv_layer():
 		trans_mat_flip[act] = npy.flipud(npy.fliplr(trans_mat[act]))
 		q_value_layers[act]=signal.convolve2d(value_function,trans_mat_flip[act],'same','fill',0)
 
+def store_belief(len_ind):
+	global from_state_belief, to_state_belief, from_belief_vector
+
+	from_belief_vector[len_ind] = copy.deepcopy(from_state_belief)
+
+def backprop():	
+	belief_reward_backprop()
+	update_q_estimate()
+
 def master(traj_ind, len_ind):
 	global to_state_belief, from_state_belief, current_pose
 	global trajectory_index, length_index
@@ -240,10 +268,9 @@ def master(traj_ind, len_ind):
 	parse_data(traj_ind,len_ind)
 	belief_prop(traj_ind,len_ind)
 	bayes_obs_fusion()
-	reward_backprop()
-	update_q_estimate()
+	store_belief(len_ind)
 	feedforward_recurrence()	
-
+	 
 	# print "OS:", observed_state, "CP:", current_pose, "TA:", target_actions, "SM:", qmdp_values_softmax
 
 def feedback():
@@ -251,12 +278,16 @@ def feedback():
 	conv_layer()
 
 def Inverse_Q_Learning():
-	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index, from_state_belief
+	global trajectories, trajectory_index, length_index, trajectory_length
+	global number_trajectories, time_index, from_state_belief, from_belief_vector
 	time_index = 0
 	
 	for trajectory_index in range(0,number_trajectories):
 	# for trajectory_index in range(0,25):
 		
+		from_belief_vector = npy.zeros((trajectory_length,discrete_size,discrete_size))
+		index_list = range(0,trajectory_length-1)
+
 		parse_data(trajectory_index,0)
 		initialize_state()
 
@@ -270,7 +301,23 @@ def Inverse_Q_Learning():
 				print "WARNING: Belief sum below 0."
 				print "Trajectory: ", trajectory_index, "Step:", length_index
 
-		feedback()
+		while index_list:
+			length_index = random.choice(index_list)
+			parse_backprop_index(trajectory_index, length_index)
+			backprop()
+			index_list.remove(length_index)
+
+		# for length_index in range(0,trajectory_length-1):			
+			
+		# 	if (from_state_belief.sum()>0):
+		# 		master(trajectory_index, length_index)
+		# 		time_index += 1
+		# 		print "Trajectory:", trajectory_index, "Step:", length_index
+		# 	else: 
+		# 		print "WARNING: Belief sum below 0."
+		# 		print "Trajectory: ", trajectory_index, "Step:", length_index
+
+		# feedback()
 
 		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 		# # plt.show(block=False)
@@ -284,22 +331,27 @@ parse_data(0,0)
 initialize_all()
 Inverse_Q_Learning()
 
-# for i in range(0,action_size):
-# 	imshow(reward_estimate[i], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
-# 	colorbar()
-# 	plt.show()
+# with file('from_beliefs.txt','w') as outfile:
+# 	for data_slice in from_belief_vector:
+# 		outfile.write('#New Slice:')
+# 		npy.savetxt(outfile,data_slice,fmt='%-7.3f')
 
-with file('Q_Value_Estimate.txt','w') as outfile:
-	for data_slice in q_value_estimate:
-		outfile.write('#Q_Value_Estimate.\n')
-		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+# # for i in range(0,action_size):
+# # 	imshow(reward_estimate[i], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+# # 	colorbar()
+# # 	plt.show()
 
-with file('Value_Function_Estimate.txt','w') as outfile:
-	outfile.write('#Value_Function_Estimate.\n')
-	npy.savetxt(outfile,value_function,fmt='%-7.2f')
+# with file('Q_Value_Estimate.txt','w') as outfile:
+# 	for data_slice in q_value_estimate:
+# 		outfile.write('#Q_Value_Estimate.\n')
+# 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
-with file('Reward_Function_Estimate.txt','w') as outfile:
-	for data_slice in reward_estimate:
-		outfile.write('#Reward_Function_Estimate.\n')
-		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+# with file('Value_Function_Estimate.txt','w') as outfile:
+# 	outfile.write('#Value_Function_Estimate.\n')
+# 	npy.savetxt(outfile,value_function,fmt='%-7.2f')
+
+# with file('Reward_Function_Estimate.txt','w') as outfile:
+# 	for data_slice in reward_estimate:
+# 		outfile.write('#Reward_Function_Estimate.\n')
+# 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
