@@ -72,9 +72,10 @@ observed_trajectories = observed_trajectories.reshape((number_trajectories,traje
 actions_taken = npy.loadtxt(str(sys.argv[4]))
 actions_taken = actions_taken.reshape((number_trajectories,trajectory_length))
 target_actions = npy.zeros(action_size)
+belief_target_actions = npy.zeros(action_size)
 
 time_limit = number_trajectories*trajectory_length
-learning_rate = 1
+learning_rate = 0.5
 annealing_rate = (learning_rate/5)/time_limit
 
 from_belief_vector = npy.zeros((trajectory_length, discrete_size, discrete_size))
@@ -209,7 +210,14 @@ def belief_reward_backprop():
 
 	for act in range(0,action_size):
 		# reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * from_state_belief[:,:]
-		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * backprop_belief[:,:]
+		# reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-target_actions[act]) * backprop_belief[:,:]
+		
+		reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-belief_target_actions[act]) * backprop_belief[:,:]
+
+		print "Action: ", act, "Thing: ", (qmdp_values_softmax[act]-belief_target_actions[act])
+		# print "Trying:"
+		# for i in range(0,50):
+		# 	print backprop_belief[i]
 
 def belief_prop(traj_ind,len_ind):
 	construct_from_ext_state()
@@ -223,11 +231,6 @@ def parse_data(traj_ind,len_ind):
 	target_actions[:] = 0
 	target_actions[actions_taken[traj_ind,len_ind]] = 1
 	current_pose[:] = trajectories[traj_ind,len_ind,:]
-
-def parse_backprop_index(traj_ind,len_ind):
-	global observed_state, target_actions, current_pose, trajectories, actions_taken
-
-	backprop_belief = from_belief_vector[len_ind]
 
 def feedforward_recurrence():
 	global from_state_belief, to_state_belief, corr_to_state_belief
@@ -256,6 +259,12 @@ def store_belief(len_ind):
 	global from_state_belief, to_state_belief, from_belief_vector
 
 	from_belief_vector[len_ind] = copy.deepcopy(from_state_belief)
+
+def parse_backprop_index(traj_ind,len_ind):
+	global observed_state, target_actions, current_pose, trajectories, actions_taken, backprop_belief
+	backprop_belief = copy.deepcopy(from_belief_vector[len_ind])
+	belief_target_actions[:] = 0
+	belief_target_actions[actions_taken[traj_ind,len_ind]] = 1
 
 def backprop():	
 	belief_reward_backprop()
@@ -307,16 +316,6 @@ def Inverse_Q_Learning():
 			backprop()
 			index_list.remove(length_index)
 
-		# for length_index in range(0,trajectory_length-1):			
-			
-		# 	if (from_state_belief.sum()>0):
-		# 		master(trajectory_index, length_index)
-		# 		time_index += 1
-		# 		print "Trajectory:", trajectory_index, "Step:", length_index
-		# 	else: 
-		# 		print "WARNING: Belief sum below 0."
-		# 		print "Trajectory: ", trajectory_index, "Step:", length_index
-
 		# feedback()
 
 		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
@@ -341,17 +340,17 @@ Inverse_Q_Learning()
 # # 	colorbar()
 # # 	plt.show()
 
-# with file('Q_Value_Estimate.txt','w') as outfile:
-# 	for data_slice in q_value_estimate:
-# 		outfile.write('#Q_Value_Estimate.\n')
-# 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+with file('Q_Value_Estimate.txt','w') as outfile:
+	for data_slice in q_value_estimate:
+		outfile.write('#Q_Value_Estimate.\n')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
 # with file('Value_Function_Estimate.txt','w') as outfile:
 # 	outfile.write('#Value_Function_Estimate.\n')
 # 	npy.savetxt(outfile,value_function,fmt='%-7.2f')
 
-# with file('Reward_Function_Estimate.txt','w') as outfile:
-# 	for data_slice in reward_estimate:
-# 		outfile.write('#Reward_Function_Estimate.\n')
-# 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+with file('Reward_Function_Estimate.txt','w') as outfile:
+	for data_slice in reward_estimate:
+		outfile.write('#Reward_Function_Estimate.\n')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
