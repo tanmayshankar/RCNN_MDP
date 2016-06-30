@@ -306,12 +306,14 @@ def Inverse_Q_Learning():
 		parse_data(trajectory_index,0)
 		initialize_state()
 
+		print "Trajectory: ", trajectory_index, "Step:", length_index
+
 		for length_index in range(0,trajectory_length-1):			
 			
 			if (from_state_belief.sum()>0):
 				master(trajectory_index, length_index)
 				time_index += 1
-				print "Trajectory:", trajectory_index, "Step:", length_index
+				# print "Trajectory:", trajectory_index, "Step:", length_index
 			else: 
 				print "WARNING: Belief sum below 0."
 				print "Trajectory: ", trajectory_index, "Step:", length_index
@@ -321,6 +323,8 @@ def Inverse_Q_Learning():
 			parse_backprop_index(trajectory_index, length_index)
 			backprop()
 			index_list.remove(length_index)
+
+			print "Index: ", length_index
 
 		feedback()
 
