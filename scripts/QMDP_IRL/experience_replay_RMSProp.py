@@ -61,7 +61,7 @@ value_function = npy.zeros((discrete_size,discrete_size))
 qmdp_values = npy.zeros(action_size)
 qmdp_values_softmax = npy.zeros(action_size)
 
-number_trajectories = 97
+number_trajectories = 47
 trajectory_length = 30
 
 trajectories = npy.loadtxt(str(sys.argv[2]))
@@ -81,7 +81,11 @@ annealing_rate = (learning_rate/5)/time_limit
 
 from_belief_vector = npy.zeros((trajectory_length, discrete_size, discrete_size))
 reward_gradients = npy.zeros((action_size,discrete_size,discrete_size))
-reward_grad_temp = npy.zeros((discrete_size,discrete_size))
+reward_grad_accum = npy.zeros((action_size,discrete_size,discrete_size))
+epsilon=0.0001
+reward_grad_temp = epsilon*npy.ones((discrete_size,discrete_size))
+# reward_grad_temp = npy.zeros((discrete_size,discrete_size))
+rms_decay = 0.9
 
 def initialize_state():
 	# global current_pose, from_state_belief, observed_state
@@ -202,19 +206,20 @@ def belief_update_QMDP_values():
 
 def belief_reward_backprop():
 	global reward_estimate, qmdp_values_softmax, target_actions, from_state_belief
-	global time_index, backprop_belief
+	global time_index, backprop_belief, learning_rate
 
 	# update_QMDP_values()
 	belief_update_QMDP_values()
 	calc_softmax()
-	# alpha = learning_rate
-
+	
+	epsilon=0.00001
+	
 	for act in range(0,action_size):
 		# reward_estimate[act,:,:] -= alpha * (qmdp_values_softmax[act]-belief_target_actions[act]) * backprop_belief[:,:]
+		
 		reward_grad_temp[:,:] = (qmdp_values_softmax[act]-target_actions[act])*backprop_belief[:,:]
-		reward_gradients[act,:,:] = rms_decay * reward_gradients[act,:,:] + (1-rms_decay) * reward_grad_temp[:,:]
-		# reward_estimate[act,:,:] -= learning_rate * reward_grad_temp[:,:] / npy.sqrt(reward_gradients[:,:])
-		reward_estimate[act,:,:] -= learning_rate * reward_grad_temp[:,:] / npy.sqrt(reward_gradients[act,:,:])
+		reward_grad_accum[act,:,:] = rms_decay * reward_grad_accum[act,:,:] + (1-rms_decay) * (reward_grad_temp[:,:]**2)
+		reward_estimate[act,:,:] -= learning_rate * reward_grad_temp[:,:] / npy.sqrt(reward_grad_accum[act,:,:]+epsilon)
 
 def belief_prop(traj_ind,len_ind):
 	construct_from_ext_state()
