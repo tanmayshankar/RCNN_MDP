@@ -1,82 +1,10 @@
 #!/usr/bin/env python
-import numpy as npy
-import matplotlib.pyplot as plt
-import sys
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt 
-import random
-from scipy.stats import rankdata
-from matplotlib.pyplot import *
-from scipy import signal
-import copy
 
-
-###### DEFINITIONS
-basis_size = 3
-discrete_size = 50
-
-#Action size also determines number of convolutional filters. 
-action_size = 8
-action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
-## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
-
-#Transition space size determines size of convolutional filters. 
-transition_space = 3
-obs_space = 3
-h=obs_space/2
-time_limit = 1000
-
-bucket_space = npy.zeros((action_size,transition_space**2))
-cummulative = npy.zeros(action_size)
-bucket_index = 0
-
-obs_bucket_space = npy.zeros(obs_space**2)
-obs_bucket_index =0 
-obs_cummulative = 0
-
-npy.set_printoptions(precision=3)
-
-value_function = npy.zeros(shape=(discrete_size,discrete_size))
-optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
-
-#### DEFINING DISCOUNT FACTOR
-gamma = 0.95
-# gamma = 1.
-
-#### DEFINING TRANSITION RELATED VARIABLES
-trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
-trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
-
-
-#### DEFINING STATE BELIEF VARIABLES
-to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-target_belief = npy.zeros(shape=(discrete_size,discrete_size))
-corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
-intermed_bel = npy.zeros((discrete_size,discrete_size))
-
-#### DEFINING EXTENDED STATE BELIEFS 
-w = transition_space/2
-to_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
-from_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
-
-#### DEFINING OBSERVATION RELATED VARIABLES
-observation_model = npy.zeros(shape=(obs_space,obs_space))
-obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
-observed_state = npy.zeros(2)
-
-state_counter = 0
-action = 'w'
-
-learning_rate = 0.05
-annealing_rate = 8*(learning_rate/5)/time_limit
-time_count = npy.zeros(action_size)
-lamda_vector = 0*npy.ones(action_size)
-
-norm_sum_bel=0.
+from variables import *
+# current_pose=[24,24]
 
 def initialize_state():
-	global current_pose, from_state_belief
+	global current_pose, from_state_belief, current_pose
 	from_state_belief[24,24]=1.
 	current_pose=[24,24]
 
@@ -227,7 +155,7 @@ def belief_prop_extended(action_index):
 	to_state_belief[:,:] = copy.deepcopy(to_state_ext[w:d+w,w:d+w])
 
 def simulated_model(action_index):
-	global trans_mat, from_state_belief, bucket_space, bucket_index, cummulative
+	global trans_mat, from_state_belief, bucket_space, bucket_index, cummulative, current_pose
 
 	#### BASED ON THE TRANSITION MODEL CORRESPONDING TO ACTION_INDEX, PROBABILISTICALLY FIND THE NEXT SINGLE STATE.
 	#must find the right bucket
@@ -280,6 +208,8 @@ def belief_prop(action_index):
 		to_state_belief /= to_state_belief.sum()
 	# from_state_belief = to_state_belief
 
+
+
 def calc_intermed_bel():
 	# global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
 	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel
@@ -290,17 +220,6 @@ def calc_intermed_bel():
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
 			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
-	intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
-
-def calc_intermed_bel_cross_entropy():
-	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel
-
-	dummy = npy.zeros((discrete_size,discrete_size))	
-	h = obs_space/2
-
-	for i in range(-h,h+1):
-		for j in range(-h,h+1):
-			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] / to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
 	intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calc_sensitivity():
@@ -321,8 +240,6 @@ def back_prop_conv(action_index, time_index):
 	alpha = learning_rate - annealing_rate*time_count[action_index]
 
 	grad_update = signal.convolve2d(sens_belief, intermed_bel, 'valid')
-
-	
 	# print "GRAD UPDATE SHAPE:", grad_update.shape
 	
 	# for m in range(-w,w+1):
@@ -337,33 +254,42 @@ def back_prop_conv(action_index, time_index):
 	# lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
 
 def back_prop_conv_KKT(action_index, time_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, lamda_vector, sens_belief
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, lamda, sens_belief
 
-	# calc_intermed_bel()
-	calc_intermed_bel_cross_entropy()
+	calc_intermed_bel()
 	calc_sensitivity()
 
 	w = transition_space/2
 	time_count[action_index] +=1
 	alpha = learning_rate - annealing_rate*time_count[action_index]
+	# lamda = 5
 
 	grad_update = -signal.convolve2d(sens_belief, intermed_bel, 'valid')
 	# print "GRAD UPDATE SHAPE:", grad_update
 					
-	grad_update[:,:] += lamda_vector[action_index]*(trans_mat_unknown[action_index,:,:].sum() - 1.)
-	# lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
+	grad_update[:,:] += lamda*(trans_mat_unknown[action_index,:,:].sum() - 1.)
+	# # lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
 
 	for m in range(-w,w+1):
 		for n in range(-w,w+1):
 			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
 				trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
 
+	# penalty = 1
+
+	# # for m in range(-w,w+1):
+	# # 	for n in range(-w,w+1):
+	# # 		if (trans_mat_unknown[action_index,w+m,w+n]<0):
+	# # 			grad_update[w+m,w+n] -= penalty * trans_mat_unknown[action_index,w+m,w+n]
+	# # 		if (trans_mat_unknown[action_index,w+m,w+n]>1):
+	# # 			grad_update[w+m,w+n] += penalty * (trans_mat_unknown[action_index,w+m,w+n]-1)
+
 	# for m in range(-w,w+1):
 	# 	for n in range(-w,w+1):
-	# 		if (trans_mat_unknown[action_index,w+m,w+n]<0):
-	# 			grad_update[w+m,w+n] -= trans_mat_unknown[action_index,w+m,w+n]
-	# 		if (trans_mat_unknown[action_index,w+m,w+n]>1):
-	# 			grad_update[w+m,w+n] += trans_mat_unknown[action_index,w+m,w+n] -1 
+	# 		if ((trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n])<0):
+	# 			grad_update[w+m,w+n] -= penalty * trans_mat_unknown[action_index,w+m,w+n]
+	# 		if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>1):
+	# 			grad_update[w+m,w+n] += penalty * (trans_mat_unknown[action_index,w+m,w+n]-1)
 
 	# trans_mat_unknown[action_index] -= alpha*grad_update
 
@@ -398,22 +324,60 @@ def input_actions():
 		iterate+=1
 		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		print "Iteration:",iterate," Current pose:",current_pose,"Observed State:",observed_state," Action:",action_index
+		# print "Iteration:",iterate," Current pose:",current_pose,"Observed State:",observed_state," Action:",action_index
 		master(action_index, iterate)
 
-input_actions()
+def compute_error():
+	global transition_space,trans_mat_unknown, trans_mat, action_index, to_state_belief, target_belief
+
+	dummy_trans = copy.deepcopy(trans_mat_unknown)
+	dummy_trans_2 = copy.deepcopy(trans_mat_unknown)
+	dummy_trans_2 -= trans_mat
+	
+	mean_error = -(npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:]) + (1-trans_mat[:,:])*npy.log(1 - dummy_trans[:,:] )))
+	std_dev = npy.sqrt(npy.sum(dummy_trans_2[action_index]**2)/(transition_space**2))	
+
+	print "Error: ", mean_error, std_dev
 
 def flip_trans_again():
 	for i in range(0,action_size):
 		trans_mat_unknown[i] = npy.fliplr(trans_mat_unknown[i])
 		trans_mat_unknown[i] = npy.flipud(trans_mat_unknown[i])
 
-flip_trans_again()
+
+input_actions()
+# flip_trans_again()
+# compute_error()
+
+def penalty_weights():
+	global lamda
+	for i in npy.linspace(0.1,10,51):
+		lamda = i
+		initialize_all()
+		input_actions()
+		flip_trans_again()
+		compute_error()
+
+		print "Running on lamda:", i
+
+penalty_weights()
+
+
+
+
+
 
 print "Learnt Transition Model:\n", trans_mat_unknown
 
 # for i in range(0,8):
 # 	print trans_mat_unknown[i].sum()
+
+with file('unnorm_transition.txt','w') as outfile: 
+	for data_slice in trans_mat_unknown:
+		outfile.write('#Transition Function.\n')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
+
+
 
 for i in range(0,8):
 	trans_mat_unknown[i,:,:] /= trans_mat_unknown[i,:,:].sum()
