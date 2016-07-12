@@ -75,7 +75,7 @@ actions_taken = actions_taken.reshape((number_trajectories,trajectory_length))
 target_actions = npy.zeros(action_size)
 
 time_limit = number_trajectories*trajectory_length
-learning_rate = 0.2
+learning_rate = 1
 annealing_rate = (learning_rate/5)/time_limit
 
 def initialize_state():
@@ -189,8 +189,8 @@ def belief_prop(traj_ind,len_ind):
 def parse_data(traj_ind,len_ind):
 	global observed_state, trajectory_index, length_index, target_actions, current_pose, trajectories
 
-	# observed_state[:] = observed_trajectories[traj_ind,len_ind+1,:]
-	observed_state[:] = trajectories[traj_ind,len_ind+1,:]
+	observed_state[:] = observed_trajectories[traj_ind,len_ind+1,:]
+	# observed_state[:] = trajectories[traj_ind,len_ind+1,:]
 	target_actions[:] = 0
 	target_actions[actions_taken[traj_ind,len_ind]] = 1
 	current_pose[:] = trajectories[traj_ind,len_ind,:]
