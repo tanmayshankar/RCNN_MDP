@@ -1,108 +1,8 @@
 #!/usr/bin/env python
 import numpy as npy
-import matplotlib.pyplot as plt
-import rospy
-import sys
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt 
-import random
-from scipy.stats import rankdata
-from matplotlib.pyplot import *
-from scipy import signal
-import copy
+from variables import *
 
-
-###### DEFINITIONS
-basis_size = 3
-discrete_size = 50
-
-#Action size also determines number of convolutional filters. 
 action_size = 8
-action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
-## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
-
-#Transition space size determines size of convolutional filters. 
-transition_space = 3
-obs_space = 3
-h=obs_space/2
-time_limit = 500
-trajectory_index=0
-length_index=0
-
-bucket_space = npy.zeros((action_size,transition_space**2))
-cummulative = npy.zeros(action_size)
-bucket_index = 0
-# time_limit = 500
-
-obs_bucket_space = npy.zeros(obs_space**2)
-obs_bucket_index =0 
-obs_cummulative = 0
-
-npy.set_printoptions(precision=3)
-
-value_function = npy.zeros(shape=(discrete_size,discrete_size))
-optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
-
-#### DEFINING DISCOUNT FACTOR
-gamma = 0.95
-# gamma = 1.
-
-#### DEFINING TRANSITION RELATED VARIABLES
-trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
-trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
-
-
-#### DEFINING STATE BELIEF VARIABLES
-to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-target_belief = npy.zeros(shape=(discrete_size,discrete_size))
-corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
-#### DEFINING EXTENDED STATE BELIEFS 
-w = transition_space/2
-to_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
-from_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
-
-#### DEFINING OBSERVATION RELATED VARIABLES
-observation_model = npy.zeros(shape=(obs_space,obs_space))
-obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
-observed_state = npy.zeros(2)
-current_pose = npy.zeros(2)
-current_pose = current_pose.astype(int)
-
-state_counter = 0
-action = 'w'
-
-#### Take required inputs. 
-trans_mat = npy.loadtxt(str(sys.argv[1]))
-trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
-
-print trans_mat
-#### Remember, these are target Q values. We don't need to learn these. 
-# q_value_layers = npy.loadtxt(str(sys.argv[2]))
-# q_value_layers = q_value_layers.reshape((action_size,discrete_size,discrete_size))
-
-q_value_estimate = npy.ones((action_size,discrete_size,discrete_size))
-# q_value_layers /= q_value_layers.sum()
-
-qmdp_values = npy.zeros(action_size)
-qmdp_values_softmax = npy.zeros(action_size)
-
-number_trajectories =47
-trajectory_length = 30
-
-trajectories = npy.loadtxt(str(sys.argv[2]))
-trajectories = trajectories.reshape((number_trajectories,trajectory_length,2))
-
-observed_trajectories = npy.loadtxt(str(sys.argv[3]))
-observed_trajectories = observed_trajectories.reshape((number_trajectories,trajectory_length,2))
-
-actions_taken = npy.loadtxt(str(sys.argv[4]))
-actions_taken = actions_taken.reshape((number_trajectories,trajectory_length))
-target_actions = npy.zeros(action_size)
-
-time_limit = number_trajectories*trajectory_length
-learning_rate = 1
-annealing_rate = (learning_rate/5)/time_limit
 
 def initialize_state():
 	# global current_pose, from_state_belief, observed_state
@@ -248,16 +148,13 @@ trajectory_index = 0
 length_index = 0
 parse_data()
 
-
-
 Inverse_Q_Learning()
 
 value_function = npy.amax(q_value_estimate, axis=0)
-imshow(value_function, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+plt.imshow(value_function, interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
 plt.show(block=False)
-colorbar()
-draw()
-show()
+plt.colorbar()
+plt.show()
 
 with file('Q_Value_Estimate.txt','w') as outfile:
 	for data_slice in q_value_estimate:

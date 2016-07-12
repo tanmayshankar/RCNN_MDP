@@ -1,110 +1,12 @@
 #!/usr/bin/env python
 import numpy as npy
-import matplotlib.pyplot as plt
-# import rospy
-import sys
-from mpl_toolkits.mplot3d import Axes3D
-# import matplotlib.pyplot as plt 
-import random
-from scipy.stats import rankdata
-from matplotlib.pyplot import *
-from scipy import signal
-import copy
+from variables import *
 
-###### DEFINITIONS
-basis_size = 3
-discrete_size = 50
-
-#Action size also determines number of convolutional filters. 
 action_size = 8
-action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
-## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
-
-#Transition space size determines size of convolutional filters. 
-transition_space = 3
-obs_space = 3
-h=obs_space/2
-time_limit = 500
-trajectory_index=0
-length_index=0
-
-bucket_space = npy.zeros((action_size,transition_space**2))
-cummulative = npy.zeros(action_size)
-bucket_index = 0
-# time_limit = 500
-
-obs_bucket_space = npy.zeros(obs_space**2)
-obs_bucket_index =0 
-obs_cummulative = 0
-
-npy.set_printoptions(precision=3)
-
-value_function = npy.zeros(shape=(discrete_size,discrete_size))
-optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
-
-#### DEFINING DISCOUNT FACTOR
-gamma = 0.95
-# gamma = 1.
-
-#### DEFINING TRANSITION RELATED VARIABLES
-trans_mat = npy.zeros(shape=(action_size,transition_space,transition_space))
-trans_mat_unknown = npy.zeros(shape=(action_size,transition_space,transition_space))
-
-#### DEFINING STATE BELIEF VARIABLES
-to_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-from_state_belief = npy.zeros(shape=(discrete_size,discrete_size))
-target_belief = npy.zeros(shape=(discrete_size,discrete_size))
-corr_to_state_belief = npy.zeros((discrete_size,discrete_size))
-#### DEFINING EXTENDED STATE BELIEFS 
-w = transition_space/2
-to_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
-from_state_ext = npy.zeros((discrete_size+2*w,discrete_size+2*w))
-
-#### DEFINING OBSERVATION RELATED VARIABLES
-observation_model = npy.zeros(shape=(obs_space,obs_space))
-obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
-observed_state = npy.zeros(2)
-current_pose = npy.zeros(2)
-current_pose = current_pose.astype(int)
-
-state_counter = 0
-action = 'w'
-
-#### Take required inputs. 
-trans_mat = npy.loadtxt(str(sys.argv[1]))
-trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
-
-#### Remember, these are target Q values. We don't need to learn these. 
-# q_value_layers = npy.loadtxt(str(sys.argv[2]))
-# q_value_layers = q_value_layers.reshape((action_size,discrete_size,discrete_size))
-
-q_value_estimate = npy.ones((action_size,discrete_size,discrete_size))
-# q_value_layers /= q_value_layers.sum()
-
-qmdp_values = npy.zeros(action_size)
-qmdp_values_softmax = npy.zeros(action_size)
-
-number_trajectories =47
-trajectory_length = 30
-
-trajectories = npy.loadtxt(str(sys.argv[2]))
-trajectories = trajectories.reshape((number_trajectories,trajectory_length,2))
-
-observed_trajectories = npy.loadtxt(str(sys.argv[3]))
-observed_trajectories = observed_trajectories.reshape((number_trajectories,trajectory_length,2))
-
-actions_taken = npy.loadtxt(str(sys.argv[4]))
-actions_taken = actions_taken.reshape((number_trajectories,trajectory_length))
-target_actions = npy.zeros(action_size)
-
-time_limit = number_trajectories*trajectory_length
-learning_rate = 1
-annealing_rate = (learning_rate/5)/time_limit
 
 def initialize_state():
-	# global current_pose, from_state_belief, observed_state
-	global observed_state
-	from_state_belief[observed_state[0],observed_state[1]]=1.	
+	global current_pose, from_state_belief, observed_state
+	from_state_belief[observed_state[0],observed_state[1]] = 1.	
 
 def initialize_observation():
 	global observation_model
@@ -196,7 +98,7 @@ def Q_backprop():
 	# alpha = learning_rate
 
 	for act in range(0,action_size):
-		q_value_estimate[act,:,:] = q_value_estimate[act,:,:] - alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
+		q_value_estimate[act,:,:] -= alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
 
 		# print "Ello", alpha*(qmdp_values_softmax[act]-target_actions[act])*from_state_belief[:,:]
 def parse_data(traj_ind,len_ind):
@@ -218,16 +120,13 @@ def master(traj_ind, len_ind):
 
 	
 	construct_from_ext_state()
-	# belief_prop_extended(actions_taken[trajectory_index,length_index])
 	belief_prop_extended(actions_taken[traj_ind,len_ind])
 	
 	print observed_state, current_pose, target_actions, qmdp_values_softmax
 	# bayes_obs_fusion()
-	parse_data(traj_ind,len_ind)
-
 	Q_backprop()
-	# display_beliefs()
 	feedforward_recurrence()	
+	parse_data(traj_ind,len_ind)
 
 def Inverse_Q_Learning():
 	global trajectories, trajectory_index, length_index, trajectory_length, number_trajectories, time_index
@@ -235,9 +134,9 @@ def Inverse_Q_Learning():
 	# for trajectory_index in range(0,number_trajectories):
 	selected_traj = npy.array([13])
 	# selected_traj = npy.array([13,14,16])
-	# selected_traj = npy.array([0,3,4,7,8,9,13,14,16,17,22,28,32,33,37,44])
-	# for trajectory_index in selected_traj:
-	for trajectory_index in range(0,number_trajectories):
+	selected_traj = npy.array([0,3,4,7,8,9,13,14,16,17,22,28,32,33,37,44])
+	for trajectory_index in selected_traj:
+	# for trajectory_index in range(0,number_trajectories):
 		parse_data(trajectory_index,0)
 		initialize_state()
 		for length_index in range(0,trajectory_length):			
@@ -248,14 +147,10 @@ def Inverse_Q_Learning():
 			else: 
 				print "We've got a problem"
 
-		imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
-		# plt.show(block=False)
-		colorbar()
-		plt.show()
-		# plt.title('Trajectory Index: %i')
-		
-		# draw()
-		# show() 
+		# plt.imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
+		# plt.colorbar()
+		# plt.show()
+	
 
 trajectory_index = 0
 length_index = 0
