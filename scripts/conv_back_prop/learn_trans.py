@@ -5,13 +5,10 @@ from variables import *
 def initialize_state():
 	global current_pose, from_state_belief
 	from_state_belief[24,24]=1.
-	# from_state_belief[25,24]=0.8
 	current_pose=[24,24]
 
 def initialize_transitions():
 	global trans_mat
-	# trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
-	# trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
 	trans_mat_1 = npy.array([[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]])
 	trans_mat_2 = npy.array([[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]])
 	
@@ -33,78 +30,15 @@ def initialize_transitions():
 	trans_mat[7] = npy.rot90(trans_mat_2,2)
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
-	print "Transition Matrices:\n",trans_mat
-
-	# for i in range(0,action_size):
-	# 	trans_mat[i] = npy.fliplr(trans_mat[i])
-	# 	trans_mat[i] = npy.flipud(trans_mat[i])
-
 def initialize_unknown_transitions():
 	global trans_mat_unknown
 
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
-	# 		trans_mat_unknown[:,i,j] = random.random()
-			trans_mat_unknown[:,i,j] = 1.
+			trans_mat_unknown[:,i,j] = random.random()
+			# trans_mat_unknown[:,i,j] = 1.
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
-
-# def initialize_unknown_observation():
-# 	global obs_model_unknown
-# 	obs_model_unknown = obs_model_unknown/obs_model_unknown.sum()
-
-# def initialize_observation():
-# 	global observation_model
-# 	observation_model = npy.array([[0.,0.1,0.],[0.1,0.6,0.1],[0.,0.1,0.]])
-# 	print observation_model
-
-# def fuse_observations():
-# 	# global from_state_belief
-# 	# global current_pose
-# 	# global observation_model
-	
-# 	global from_state_belief, current_pose, observation_model
-
-# 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
-# 	# l = obs_space/2
-# 	# for i in range(-l,l+1):
-# 	# 	for j in range(-l,l+1):
-# 	# 		dummy[i+current_pose[0],j+current_pose[1]] = from_state_belief[i+current_pose[0],j+current_pose[1]]*observation_model[l+i,l+j]
-
-# 	for i in range(0,obs_space):
-# 		for j in range(0,obs_space):
-# 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = from_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
-
-# 	# print "Dummy.",dummy
-# 	from_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
-
-def display_beliefs():
-	global from_state_belief,to_state_belief,target_belief,current_pose
-
-	print "From:"
-	for i in range(current_pose[0]-5,current_pose[0]+5):
-		print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
-	print "To:"
-	for i in range(current_pose[0]-5,current_pose[0]+5):
-		print to_state_belief[i,current_pose[1]-5:current_pose[1]+5]
-	print "Target:"
-	for i in range(current_pose[0]-5,current_pose[0]+5):
-		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
-
-# def bayes_obs_fusion():
-# 	global to_state_belief
-# 	global current_pose
-# 	global observation_model
-# 	global obs_space
-	
-# 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-
-# 	for i in range(0,obs_space):
-# 		for j in range(0,obs_space):
-# 			dummy[current_pose[0]-1+i,current_pose[1]-1+j] = to_state_belief[current_pose[0]-1+i,current_pose[1]-1+j]*observation_model[i,j]
-	
-# 	to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def remap_indices(bucket_index):
 
@@ -135,27 +69,20 @@ def initialize_model_bucket():
 		orig_mat = npy.flipud(npy.fliplr(trans_mat[k,:,:]))
 
 		for i in range(0,transition_space):
-			for j in range(0,transition_space):
-				# Here, it must be the original, non -flipped transition matrix. 
-				# cummulative += trans_mat[action_index,transition_space-i,transition_space-j]
-				# cummulative += trans_mat[action_index,i,j]
+			for j in range(0,transition_space):				
 				cummulative[k] += orig_mat[i,j]
 				bucket_space[k,transition_space*i+j] = cummulative[k]
 
-
 def initialize_all():
-	initialize_state()
-	# initialize_observation()
-	initialize_transitions()
-	# initialize_unknown_observation()
+	initialize_state()	
+	initialize_transitions()	
 	initialize_unknown_transitions()
 	initialize_model_bucket()
 
 def construct_from_ext_state():
 	global from_state_ext, from_state_belief,discrete_size
 	d=discrete_size
-	from_state_ext[w:d+w,w:d+w] = from_state_belief[:,:]
-	# from_state_ext[2*w:d+2*w,2*w:d+2*w] = from_state_belief[:,:]
+	from_state_ext[w:d+w,w:d+w] = from_state_belief[:,:]	
 
 def belief_prop_extended(action_index):
 	global trans_mat_unknown, from_state_ext, to_state_ext, w, discrete_size
@@ -177,9 +104,6 @@ def belief_prop_extended(action_index):
 def simulated_model(action_index):
 	global trans_mat, from_state_belief, bucket_space, bucket_index, cummulative
 
-	#### BASED ON THE TRANSITION MODEL CORRESPONDING TO ACTION_INDEX, PROBABILISTICALLY FIND THE NEXT SINGLE STATE.
-	#must find the right bucket
-
 	rand_num = random.random()
 
 	if (rand_num<bucket_space[action_index,0]):
@@ -188,22 +112,13 @@ def simulated_model(action_index):
 	for i in range(1,transition_space**2):
 		if (bucket_space[action_index,i-1]<=rand_num)and(rand_num<bucket_space[action_index,i]):
 			bucket_index=i
-			# print "Bucket Index chosen: ",bucket_index
-
+	
 	remap_index = remap_indices(bucket_index)
-	# print "Remap Index:",remap_index
-	# print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
-
-	# if (bucket_index==((transition_space**2)/2)):
-		# print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
-		# print "No action."		
-	# else:
+	
 	if (bucket_index!=((transition_space**2)/2)):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
-		
-		# print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
-		
+			
 	target_belief[:,:] = 0. 
 	target_belief[current_pose[0],current_pose[1]]=1.
 	
@@ -213,15 +128,10 @@ def belief_prop(action_index):
 	to_state_belief = signal.convolve2d(from_state_belief,trans_mat_unknown[action_index],'same','fill',0)
 	if (to_state_belief.sum()<1.):
 		to_state_belief /= to_state_belief.sum()
-	# from_state_belief = to_state_belief
 
 def back_prop(action_index,time_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, lamda_vector
 
-	# loss = npy.zeros(shape=(transition_space,transition_space))
-	# alpha = learning_rate - annealing_rate * time_index
-	# alpha = learning_rate
-	
 	w = transition_space/2
 
 	time_count[action_index] +=1
@@ -236,9 +146,7 @@ def back_prop(action_index,time_index):
 						loss_1 -= 2*(target_belief[i,j]-to_state_belief[i,j])*from_state_belief[i-m,j-n]
 			
 			loss_1 += lamda_vector[action_index] * (trans_mat_unknown[action_index,:,:].sum() - 1.)
-
-			# temp = trans_mat_unknown[action_index,w+m,w+n] - alpha*loss[w+m,w+n]		
-			# if (temp>=0)and(temp<=1):
+			
 			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*loss_1<1):
 				trans_mat_unknown[action_index,w+m,w+n] -= alpha*loss_1
 
@@ -263,10 +171,6 @@ def back_prop_conv(action_index, time_index):
 	grad_update = signal.convolve2d(sens_belief, target_belief - to_state_belief, 'valid')
 	trans_mat_unknown[action_index] += alpha*grad_update
 
-	# loss_1 = lamda_vector[action_index] * (trans_mat_unknown[action_index].sum() - 1.)
-	# trans_mat_unknown[action_index] -= alpha * loss_1
-	# lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
-
 def recurrence():
 	global from_state_belief,target_belief
 	from_state_belief = copy.deepcopy(target_belief)
@@ -290,8 +194,7 @@ def input_actions():
 	iterate=0
 
 	while (iterate<=time_limit):		
-		iterate+=1
-		# action_index = random.randrange(0,8)
+		iterate+=1	
 		action_index=iterate%8
 		print "Iteration:",iterate," Current pose:",current_pose," Action:",action_index
 		master(action_index, iterate)
@@ -315,46 +218,7 @@ print "Normalized:\n",trans_mat_unknown
 
 print "Actual transition matrix:" , trans_mat
 
-
 print "Lamda Vector:", lamda_vector
-
-
-
-
-
-######TO RUN FEEDFORWARD PASSES OF THE RECURRENT CONV NET.#########
-
-def conv_layer():	
-	global value_function
-	global trans_mat
-	action_value_layers = npy.zeros(shape=(action_size,discrete_size,discrete_size))
-	layer_value = npy.zeros(shape=(discrete_size,discrete_size))
-	for act in range(0,action_size):		
-		#Convolve with each transition matrix.
-		action_value_layers[act]=signal.convolve2d(value_function,trans_mat[act],'same','fill',0)
-	
-	#Max pooling over actions. 
-	value_function = gamma*npy.amax(action_value_layers,axis=0)
-	# layer_value = gamma*npy.amax(action_value_layers,axis=0)
-	print "The next value function.",value_function
-	optimal_policy[:,:] = npy.argmax(action_value_layers,axis=0)
-	# return layer_value
-
-def reward_bias():
-	global value_function
-	value_function = value_function + reward_function
-
-def recurrent_value_iteration():
-	global value_function
-	print "Start iterations."
-	t=0	
-	while (t<time_limit):
-		conv_layer()
-		reward_bias()		
-		t+=1
-		print t
-	
-# recurrent_value_iteration()
 
 with file('actual_transition.txt','w') as outfile: 
 	for data_slice in trans_mat:
