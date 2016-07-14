@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from variables import *
-# current_pose=[24,24]
 
 def initialize_state():
 	global current_pose, from_state_belief, current_pose
@@ -10,8 +9,6 @@ def initialize_state():
 
 def initialize_transitions():
 	global trans_mat
-	# trans_mat_1 = npy.array([[0.,0.97,0.],[0.01,0.01,0.01],[0.,0.,0.]])
-	# trans_mat_2 = npy.array([[0.97,0.01,0.],[0.01,0.01,0.],[0.,0.,0.]])
 	trans_mat_1 = npy.array([[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]])
 	trans_mat_2 = npy.array([[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]])
 	
@@ -33,40 +30,22 @@ def initialize_transitions():
 	trans_mat[7] = npy.rot90(trans_mat_2,2)
 	trans_mat[6] = npy.rot90(trans_mat_2,1)
 
-	print "Transition Matrices:\n",trans_mat
-
 def initialize_unknown_transitions():
 	global trans_mat_unknown
 
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
-	# 		trans_mat_unknown[:,i,j] = random.random()
-			trans_mat_unknown[:,i,j] = 1.
+			trans_mat_unknown[:,i,j] = random.random()
+			# trans_mat_unknown[:,i,j] = 1.
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
 
 def initialize_observation():
 	global observation_model
 	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
-	# observation_model = npy.array([[0.,0.,0.],[0.,1.,0.],[0.,0.,0.]])
-	# print observation_model
-
 	epsilon=0.0001
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
-
-def display_beliefs():
-	global from_state_belief,to_state_belief,target_belief,current_pose
-
-	print "From:"
-	for i in range(current_pose[0]-5,current_pose[0]+5):
-		print from_state_belief[i,current_pose[1]-5:current_pose[1]+5]
-	print "To:"
-	for i in range(current_pose[0]-5,current_pose[0]+5):
-		print to_state_belief[i,current_pose[1]-5:current_pose[1]+5]
-	print "Target:"
-	for i in range(current_pose[0]-5,current_pose[0]+5):
-		print target_belief[i,current_pose[1]-5:current_pose[1]+5]
 
 def bayes_obs_fusion():
 	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
@@ -108,10 +87,7 @@ def initialize_model_bucket():
 		orig_mat = npy.flipud(npy.fliplr(trans_mat[k,:,:]))
 
 		for i in range(0,transition_space):
-			for j in range(0,transition_space):
-				# Here, it must be the original, non -flipped transition matrix. 
-				# cummulative += trans_mat[action_index,transition_space-i,transition_space-j]
-				# cummulative += trans_mat[action_index,i,j]
+			for j in range(0,transition_space):				
 				cummulative[k] += orig_mat[i,j]
 				bucket_space[k,transition_space*i+j] = cummulative[k]
 
@@ -196,22 +172,16 @@ def simulated_observation_model():
 	if (obs_bucket_index!=((obs_space**2)/2)):
 		remap_index = remap_indices(obs_bucket_index)
 		observed_state[0] += action_space[remap_index,0]
-		observed_state[1] += action_space[remap_index,1]
-
-	# print "Observed State: ", observed_state
+		observed_state[1] += action_space[remap_index,1]	
 
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
 
 	to_state_belief = signal.convolve2d(from_state_belief,trans_mat_unknown[action_index],'same','fill',0)
 	if (to_state_belief.sum()<1.):
-		to_state_belief /= to_state_belief.sum()
-	# from_state_belief = to_state_belief
+		to_state_belief /= to_state_belief.sum()	
 
-
-
-def calc_intermed_bel():
-	# global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
+def calc_intermed_bel():	
 	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel
 	
 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
@@ -228,30 +198,6 @@ def calc_sensitivity():
 	sens_belief = copy.deepcopy(from_state_ext)
 	sens_belief = npy.fliplr(sens_belief)
 	sens_belief = npy.flipud(sens_belief)
-
-def back_prop_conv(action_index, time_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, lamda_vector, sens_belief
-
-	calc_intermed_bel()
-	calc_sensitivity()
-
-	w = transition_space/2
-	time_count[action_index] +=1
-	alpha = learning_rate - annealing_rate*time_count[action_index]
-
-	grad_update = signal.convolve2d(sens_belief, intermed_bel, 'valid')
-	# print "GRAD UPDATE SHAPE:", grad_update.shape
-	
-	# for m in range(-w,w+1):
-	# 	for n in range(-w,w+1):
-	# 		if (trans_mat_unknown[action_index,w+m,w+n] + alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] + alpha*grad_update[w+m,w+n]<=1):
-	# 			trans_mat_unknown[action_index,w+m,w+n] += alpha*grad_update[w+m,w+n]
-
-	# trans_mat_unknown[action_index] += alpha*grad_update
-
-	# loss_1 = lamda_vector[action_index] * (trans_mat_unknown[action_index].sum() - 1.)
-	# trans_mat_unknown[action_index] -= alpha * loss_1
-	# lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
 
 def back_prop_conv_KKT(action_index, time_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, lamda, sens_belief
@@ -298,10 +244,8 @@ def recurrence():
 	from_state_belief = copy.deepcopy(target_belief)
 
 def master(action_index, time_index):
-
 	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
 
-	# belief_prop(action_index)
 	construct_from_ext_state()
 	belief_prop_extended(action_index)
 	bayes_obs_fusion()
@@ -309,7 +253,6 @@ def master(action_index, time_index):
 	simulated_model(action_index)
 	simulated_observation_model()
 
-	# back_prop_conv(action_index,time_index)
 	back_prop_conv_KKT(action_index, time_index)
 	recurrence()	
 
@@ -322,9 +265,7 @@ def input_actions():
 
 	while (iterate<=time_limit):		
 		iterate+=1
-		# action_index = random.randrange(0,8)
 		action_index=iterate%8
-		# print "Iteration:",iterate," Current pose:",current_pose,"Observed State:",observed_state," Action:",action_index
 		master(action_index, iterate)
 
 def compute_error():
@@ -346,8 +287,6 @@ def flip_trans_again():
 
 
 input_actions()
-# flip_trans_again()
-# compute_error()
 
 def penalty_weights():
 	global lamda
@@ -362,64 +301,16 @@ def penalty_weights():
 
 penalty_weights()
 
-
-
-
-
-
 print "Learnt Transition Model:\n", trans_mat_unknown
-
-# for i in range(0,8):
-# 	print trans_mat_unknown[i].sum()
-
 with file('unnorm_transition.txt','w') as outfile: 
 	for data_slice in trans_mat_unknown:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
-
-
 for i in range(0,8):
 	trans_mat_unknown[i,:,:] /= trans_mat_unknown[i,:,:].sum()
 print "Normalized Transition Model:\n",trans_mat_unknown	
-
 print "Actual Transition Model:\n" , trans_mat
-
-
-
-
-
-######TO RUN FEEDFORWARD PASSES OF THE RECURRENT CONV NET.#########
-
-def conv_layer():	
-	global value_function
-	global trans_mat
-	action_value_layers = npy.zeros(shape=(action_size,discrete_size,discrete_size))
-	layer_value = npy.zeros(shape=(discrete_size,discrete_size))
-	for act in range(0,action_size):		
-		#Convolve with each transition matrix.
-		action_value_layers[act]=signal.convolve2d(value_function,trans_mat[act],'same','fill',0)
-	
-	#Max pooling over actions. 
-	value_function = gamma*npy.amax(action_value_layers,axis=0)
-	# layer_value = gamma*npy.amax(action_value_layers,axis=0)
-	print "The next value function.",value_function
-	optimal_policy[:,:] = npy.argmax(action_value_layers,axis=0)
-	# return layer_value
-
-def reward_bias():
-	global value_function
-	value_function = value_function + reward_function
-
-def recurrent_value_iteration():
-	global value_function
-	print "Start iterations."
-	t=0	
-	while (t<time_limit):
-		conv_layer()
-		reward_bias()		
-		t+=1
-		print t
 	
 with file('actual_transition.txt','w') as outfile: 
 	for data_slice in trans_mat:
