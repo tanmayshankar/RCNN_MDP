@@ -11,8 +11,9 @@ value_function = npy.loadtxt(str(sys.argv[3]))/1000
 path_plot = copy.deepcopy(reward_function)
 max_val = npy.amax(path_plot)
 
+action_size = 9
 ##THE ORIGINAL ACTION SPACE:
-action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
+action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1],[0,0]])
 ## UP,  DOWN,  LEFT, RIGHT,UPLEFT,UPRIGHT,DOWNLEFT,DOWNRIGHT ##################
 
 def show_image(image_arg):
