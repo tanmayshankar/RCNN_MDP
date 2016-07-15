@@ -1,72 +1,71 @@
-# RCNN_MDP
+# Reinforcement Learning via Recurrent Convolutional Neural Network Architectures
 
-This repository is for exploring the connection between Markov Decision Processes, Reinforcement Learning, and Recurrent Convolutional Neural Networks. 
+This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. Guha, Reinforcement Learning via Recurrent Convolutional Neural Network Architectures, accepted at ICPR 2016. 
 
-This code base targets 3 problems: 
+This code base targets the following problems: 
 
 1. Solving Value / Policy Iteration in a standard MDP using Feedforward passes of a Value Iteration RCNN. 
 - Representing the Bayes Filter state belief update as feedforward passes of a Belief Propagation RCNN. 
 - Learning the State Transition models in a POMDP setting, using backpropagation on the Belief Propagation RCNN. 
 - Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations, using a QMDP RCNN. 
 
+To run any of the code, clone this repository to a local directory, and make sure you have Python >= 2.7 installed. Follow the following instructions to run code specific to any of the given problems. 
+
 **Value Iteration RCNN**
 
-Problem 1 may be addressed by running the appropriate script, with a stationary reward function as argument. Here's an example: 
+The VI RCNN takes a reward function and a transition model as arguments. Run the appropriate script similar to these examples: 
 
-`./scripts/feedforward_rcnn/rcnn_mdp_value_iteration.py data/trial_3/reward_function.txt`
+`./scripts/VI_RCNN/VI_feedforward.py data/VI_Trials/trial_3/reward_function.txt data/learnt_model/actual_transition.txt`
 
-If you'd like to run it with a different transition function of your choice: 
+To view the progress of Value Iteration as it goes, run: 
 
-`./scripts/feedforward_rcnn/variable_transition_size.py data/trial_3/reward_function.txt`
+`./scripts/VI_RCNN/VI_live_display.py data/VI_Trials/trial_3/reward_function.txt data/learnt_model/actual_transition.txt`
 
 To run Value Iteration with reward as a function of actions as well, run: 
 
-`./scripts/feedforward_rcnn/action_reward.py data/trial_6/reward_function.txt actual_transition.txt`
+`./scripts/VI_RCNN/VI_action_reward.py data/VI_Trials/trial_3/reward_function.txt data/learnt_model/actual_transition.txt`
+
+To run Value Iteration with an extended action vector (considering remaining stationary as an action): 
+
+`./scripts/VI_RCNN/VI_extended_actions.py data/QMDP_old_trajectories/trial_9_action_reward/action_reward_function.txt data/learnt_model/actual_transition.txt`
 
 **Displaying Optimal Policy**
 
-Once either of the feedforward passes are run, you may display the policy, reward and value functions by running the following:
+Once the feedforward passes of the VI RCNN are run, you may display the policy, reward and value functions by running the following:
 
-`./scripts/display/display_policy.py output_policy.txt reward_function.txt value_function.txt`
+`./scripts/Display/display_policy.py output_policy.txt reward_function.txt value_function.txt`
 
-**Learning Transition Model**
+If you used the extended action vector, use this instead: 
 
-To learn the state transition model of the MDP, the following codes are used for various settings. 
-For the vanilla version, run: 
+`./scripts/Display/display_policy_extended.py output_policy.txt reward_function.txt value_function.txt`
 
-`./scripts/belief_prop_rcnn/learn_trans_filter_decay.py`
+**Learning the Transition Model**
 
-To run backpropagation as convolution of sensitivies, run: 
+To learn the state transition model of the POMDP by applying backpropagation to the BP RCNN, run any of the codes of BP RCNN: Here's an example for the partially observable case. 
 
-`./scripts/conv_back_prop/learn_trans.py`
+`./scripts/BP_RCNN/BP_PO.py` 
 
-To learnt the transition model under a partially observable setting, run: 
+To run backpropagation as convolution of sensitivies instead, run any of the codes from the conv_back_prop folder: 
 
 `./scripts/conv_back_prop/learn_trans_po.py`
 
-To replan (execute value iteration) with the learnt transition model, run: 
-
-`./scripts/feedforward_rcnn/learnt_trans_feedforward.py reward_function.txt estimated_transition.txt`
+You'll notice the convolution version of backpropagation runs much faster. Try replanning (execute value iteration) with the learnt transition model! 
 
 **Following Optimal Policy**
 
 To watch an agent follow the optimal policy from a random position, with the learnt transition values, run: 
 
-`./scripts/follow_policy/follow_policy_trans.py output_policy.txt reward_function.txt value_function.txt estimated_transition.txt`
+`./scripts/Follow_Policy/follow_policy_obs.py data/VI_Trials/trial_3/output_policy.txt data/VI_Trials/trial_3/reward_function.txt data/VI_Trials/trial_3/value_function.txt data/learnt_models/estimated_transition.txt`
 
 **Generating Trajectories using Optimal Policy**
 
 To generate multiple trajectories of an agent following the optimal policy from a random position, run: 
 
-`./scripts/follow_policy/generate_trajectories_extended.py data/trials/VI_trials/trial_8_bounded/output_policy.txt data/trials/VI_trials/trial_8_bounded/reward_function.txt data/learnt_models/actual_transition.txt`
+`./scripts/follow_policy/generate_trajectories_extended.py data/VI_Trials/trial_8_bounded/output_policy.txt data/VI_Trials/trial_8_bounded/reward_function.txt data/learnt_models/actual_transition.txt`
 
 **Inverse Reinforcement Learning**
 
-To learn reward functions in an Inverse Reinforcement Learning setting using the QMDP RCNN, the following codes are used. 
-For the fully observable setting, run: 
+To learn reward functions in an Inverse Reinforcement Learning setting, run the following code. It executes backpropagation on the QMDP RCNN, and uses experience replay across transitions and RMSProp to adapt the learning rate.
 
-`./scripts/QMDP_IRL/QMDP_selected_traj.py data/learnt_models/actual_transition.txt data/trials/QMDP_IRL_trials/trial_2/Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Observed_Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Actions_Taken.txt`
+`./scripts/QMDP_RCNN/experience_replay_RMSProp.py data/learnt_models/actual_transition.txt data/QMDP_Trials/trial_2/Trajectories.txt data/QMDP_Trials/trial_2/Observed_Trajectories.txt data/QMDP_Trials/trial_2/Actions_Taken.txt`
 
-For the partially observable setting, run: 
-
-`./scripts/QMDP_IRL/QMDP_partial_obs_feedback.py data/learnt_models/actual_transition.txt data/trials/QMDP_IRL_trials/trial_2/Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Observed_Trajectories.txt data/trials/QMDP_IRL_trials/trial_2/Actions_Taken.txt`
