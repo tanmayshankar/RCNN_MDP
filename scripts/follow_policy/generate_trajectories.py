@@ -1,61 +1,8 @@
 #!/usr/bin/env python
-import numpy as npy
-from scipy.stats import truncnorm
-import matplotlib.pyplot as plt
-import pylab as pl
-# from std_msgs.msg import String
-import sys
-from mpl_toolkits.mplot3d import Axes3D
-# import matplotlib.pyplot as plt
-import random
-import copy
-from scipy.stats import rankdata
-from matplotlib.pyplot import *
 
-discrete_size = 50
-max_path_length=30
-current_pose = [0,0]
+from variables import *
 
-max_number_demos = 50
-trajectory_lengths = npy.zeros(max_number_demos)
-
-state_counter = 0
-number_demos = 0
-
-action_size=8
-transition_space = 3
-trajectories = [[[0,0],[1,2],[3,4]]]
-observed_trajectories = [[[0,0],[1,2],[3,4]]]
-actions_taken = [[0,0]]
-
-trans_mat = npy.loadtxt(str(sys.argv[3]))
-trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))
-
-optimal_policy = npy.loadtxt(str(sys.argv[1]))
-optimal_policy = optimal_policy.astype(int)
-
-reward_function = npy.loadtxt(str(sys.argv[2]))
-max_val = npy.amax(reward_function)
-max_val_location = npy.unravel_index(npy.argmax(reward_function),reward_function.shape)
-
-##THE ORIGINAL ACTION SPACE:
-action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
-##THE MODIFIED ACTION SPACE:
-# action_space = npy.array([[1,0],[-1,0],[0,-1],[0,1],[1,-1],[1,1],[-1,-1],[-1,1]])
-################# UP,  DOWN,  LEFT, RIGHT,UPLEFT,UPRIGHT,DOWNLEFT,DOWNRIGHT ##################
-
-bucket_space = npy.zeros((action_size,transition_space**2))
-cummulative = npy.zeros(action_size)
-bucket_index = 0
-
-obs_space=3
-observation_model = npy.zeros(shape=(obs_space,obs_space))
-obs_model_unknown = npy.ones(shape=(obs_space,obs_space))
-observed_state = npy.zeros(2)
-
-obs_bucket_space = npy.zeros(obs_space**2)
-obs_bucket_index =0 
-obs_cummulative = 0
+action_size = 8
 
 def modify_trans_mat():
 	global trans_mat
@@ -67,16 +14,17 @@ def modify_trans_mat():
 def initialize_model_bucket():
 	global cummulative, bucket_index, bucket_space
 	orig_mat = copy.deepcopy(trans_mat)
-	for k in range(0,action_size):
-		orig_mat = npy.flipud(npy.fliplr(trans_mat[k,:,:]))
+	dummy = copy.deepcopy(trans_mat)
+	for k in range(0,action_size):		
+		orig_mat = trans_mat[k,:,:]
 
 		for i in range(0,transition_space):
-			for j in range(0,transition_space):
-				# Here, it must be the original, non -flipped transition matrix. 
-				# cummulative += trans_mat[action_index,transition_space-i,transition_space-j]
-				# cummulative += trans_mat[action_index,i,j]
+			for j in range(0,transition_space):			
 				cummulative[k] += orig_mat[i,j]
 				bucket_space[k,transition_space*i+j] = cummulative[k]
+				dummy[k,i,j] = cummulative[k]
+
+	print "BUCKET SPACE: ", dummy, "BUCKET SPACE."
 
 def remap_indices(bucket_index):
 
@@ -103,9 +51,6 @@ def remap_indices(bucket_index):
 def simulated_model(action_index):
 	global trans_mat, from_state_belief, bucket_space, bucket_index, cummulative
 
-	#### BASED ON THE TRANSITION MODEL CORRESPONDING TO ACTION_INDEX, PROBABILISTICALLY FIND THE NEXT SINGLE STATE.
-	#must find the right bucket
-
 	rand_num = random.random()
 
 	if (rand_num<bucket_space[action_index,0]):
@@ -114,16 +59,9 @@ def simulated_model(action_index):
 	for i in range(1,transition_space**2):
 		if (bucket_space[action_index,i-1]<=rand_num)and(rand_num<bucket_space[action_index,i]):
 			bucket_index=i
-			# print "Bucket Index chosen: ",bucket_index
-
+	
 	remap_index = remap_indices(bucket_index)
-	# print "Remap Index:",remap_index
-	# print "Action Index: ",action_index," Ideal Action: ",action_space[action_index]
-
-	# if (bucket_index==((transition_space**2)/2)):
-		# print "Bucket index: ",bucket_index, "Action taken: ","[0,0]"
-		# print "No action."		
-	# else:
+	
 	if (bucket_index!=((transition_space**2)/2)):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
@@ -137,14 +75,9 @@ def simulated_model(action_index):
 	if (current_pose[1]<0):
 		current_pose[1]=0
 		
-		# print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
-				# print "Remap index: ",remap_index, "Action taken: ",action_space[remap_index]		
-
 def initialize_observation():
 	global observation_model
 	observation_model = npy.array([[0.,0.05,0.],[0.05,1.6,0.05],[0.,0.05,0.]])
-	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
-	# observation_model = npy.array([[0.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,0.0]])
 	epsilon=0.0001
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
@@ -186,6 +119,15 @@ def simulated_observation_model():
 		observed_state[0] += action_space[remap_index,0]
 		observed_state[1] += action_space[remap_index,1]
 
+	if (observed_state[0]>49):
+		observed_state[0]=49
+	if (observed_state[1]>49):
+		observed_state[1]=49
+	if (observed_state[0]<0):
+		observed_state[0]=0
+	if (observed_state[1]<0):
+		observed_state[1]=0
+
 print optimal_policy
 
 def follow_policy():
@@ -195,28 +137,22 @@ def follow_policy():
 	
  	new_demo='y'
 	act_ind = 0.
-	 # number_demos = 1
-	max_demo = 50
+	max_demo = 100
 
-	# while (new_demo!='n'):
 	while (demo_counter<max_demo-2):
 	
 		ax = random.randrange(0,discrete_size)
 		ay = random.randrange(0,discrete_size)
-
-		# ax = 0
-		# ay = 0		
 
 		current_pose[0] = ax
 		current_pose[1] = ay
 
 		simulated_observation_model()
 		
-		# current_trajectory = [[ax,ay]]
 		current_trajectory = [[current_pose[0], current_pose[1]]]
 		current_observed_trajectory = [[observed_state[0],observed_state[1]]] 
 		act_ind = optimal_policy[observed_state[0],observed_state[1]]
-		current_actions_taken = [act_ind]
+		current_actions_taken = [0]
 		state_counter=1
 	
 		while (state_counter<max_path_length)and(current_pose!=max_val_location):
@@ -224,20 +160,22 @@ def follow_policy():
 			simulated_model(act_ind)
 			simulated_observation_model()
 			
-			act_ind = optimal_policy[current_pose[0],current_pose[1]]
-			# print "The current pose is:",current_pose
-			# print "The observed state is:",observed_state
-			# print "Action Taken is:",act_ind
-
 			state_counter+=1
 
 			current_trajectory.append([current_pose[0],current_pose[1]])
 			current_observed_trajectory.append([observed_state[0],observed_state[1]])
 			current_actions_taken.append(act_ind)
 
+			print "Current Pose:", current_pose, "Action Index:", act_ind, "Action Taken:", action_space[act_ind], "Observed State:", observed_state
+			act_ind = optimal_policy[observed_state[0],observed_state[1]]
+
+
 		demo_counter+=1
 		print demo_counter
 
+		current_actions_taken.remove(current_actions_taken[0])
+		current_actions_taken.append(act_ind)
+		
 		trajectories.append(current_trajectory)
 		observed_trajectories.append(current_observed_trajectory)
 		actions_taken.append(current_actions_taken)
@@ -254,20 +192,16 @@ trajectories.remove(trajectories[0])
 observed_trajectories.remove(observed_trajectories[0])
 actions_taken.remove(actions_taken[0])
 
-print observed_trajectories
-
+print "The observed trajectories are as follows:", observed_trajectories
 print "The trajectories are as follows: ",trajectories
-
 print "The trans mats are as follows:", trans_mat
 
 with file('Trajectories.txt','w') as outfile:
-	# for data_slice in pairwise_value_func:
 	for data_slice in trajectories:
 		outfile.write('# New slice\n')
 		npy.savetxt(outfile,data_slice,fmt='%i')
 		
-with file('Observed_Trajectories.txt','w') as outfile: 
-	
+with file('Observed_Trajectories.txt','w') as outfile: 	
 	for data_slice in observed_trajectories:
 		outfile.write('#Observed Trajectory.\n')
 		npy.savetxt(outfile,data_slice,fmt='%i')
