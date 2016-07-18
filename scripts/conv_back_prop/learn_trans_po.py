@@ -216,8 +216,12 @@ def back_prop_conv(action_index, time_index):
 	
 	for m in range(-w,w+1):
 		for n in range(-w,w+1):
-			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
-				trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
+			trans_mat_unknown[action_index,w+m,w+n] = max(0,min(1,trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]))
+
+	# for m in range(-w,w+1):
+	# 	for n in range(-w,w+1):
+	# 		if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
+	# 			trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
 
 def recurrence():
 	global from_state_belief,target_belief

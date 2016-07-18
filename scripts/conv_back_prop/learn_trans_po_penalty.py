@@ -210,36 +210,50 @@ def back_prop_conv_KKT(action_index, time_index):
 	w = transition_space/2
 	time_count[action_index] +=1
 	alpha = learning_rate - annealing_rate*time_count[action_index]
-	lamda = 5
+	lamda = 1
 
+	# Basic gradient based on loss between target and output beliefs. 
 	grad_update = -signal.convolve2d(sens_belief, intermed_bel, 'valid')
-	# print "GRAD UPDATE SHAPE:", grad_update
 					
+	# Lagrangian / Penalty / KKT term for sum of Transition Model for this action = 1.
 	grad_update[:,:] += lamda*(trans_mat_unknown[action_index,:,:].sum() - 1.)
 
+	# Sink of gradient updates.
+	for m in range(-w,w+1):
+		for n in range(-w,w+1):
+			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
+				trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
+
+	# Alternate implementation of sink of gradient updates.
 	# for m in range(-w,w+1):
 	# 	for n in range(-w,w+1):
-	# 		if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
-	# 			trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
+	# 		trans_mat_unknown[action_index,w+m,w+n] = max(0,min(1,trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]))
 
-	penalty_sub = 1
-	penalty_super = 1
+	# penalty_sub = 1
+	# penalty_super = 1
 
-	for m in range(-w,w+1): 
-		for n in range(-w,w+1): 
-			if (trans_mat_unknown[action_index,w+m,w+n]<0): 
-				grad_update[w+m,w+n] -= penalty_sub 
-			if (trans_mat_unknown[action_index,w+m,w+n]>1): 
-				grad_update[w+m,w+n] += penalty_super 
+	# Linear penalties
+	# # for m in range(-w,w+1): 
+	# # 	for n in range(-w,w+1): 
+	# # 		if (trans_mat_unknown[action_index,w+m,w+n]<0): 
+	# # 			grad_update[w+m,w+n] -= penalty_sub
+	# # 		if (trans_mat_unknown[action_index,w+m,w+n]>1): 
+	# # 			grad_update[w+m,w+n] += penalty_super 
 
+	# Proportional penalties.
 	# for m in range(-w,w+1):
 	# 	for n in range(-w,w+1):
-	# 		if ((trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n])<0):
-	# 			grad_update[w+m,w+n] -= penalty * trans_mat_unknown[action_index,w+m,w+n]
-	# 		if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>1):
-	# 			grad_update[w+m,w+n] += penalty * (trans_mat_unknown[action_index,w+m,w+n]-1)
+	# 		if (trans_mat_unknown[action_index,w+m,w+n]<0): 
+	# 			grad_update[w+m,w+n] -= penalty_sub * trans_mat_unknown[action_index,w+m,w+n]	
+	# 		if (trans_mat_unknown[action_index,w+m,w+n]>1): 
+	# 			grad_update[w+m,w+n] += penalty_super * (trans_mat_unknown[action_index,w+m,w+n]-1)
 
-	trans_mat_unknown[action_index] -= alpha*grad_update
+	# Simultaneous proportional penalties. 
+	# # for m in range(-w,w+1): 
+	# # 	for n in range(-w,w+1): 
+	# # 		grad_update[w+m,w+n]+= penalty_super*(max(trans_mat_unknown[action_index,w+m,w+n],1)-1)-penalty_sub*min(trans_mat_unknown[action_index,w+m,w+n],0)
+
+	# trans_mat_unknown[action_index] -= alpha*grad_update
 
 def recurrence():
 	global from_state_belief,target_belief
