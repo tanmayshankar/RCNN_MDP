@@ -18,7 +18,7 @@ number_trajectories = 47
 
 max_dist = 5
 discrete_size = 50
-path_plot = npy.zeros(shape=(discrete_space_x,discrete_space_y))
+path_plot = npy.zeros(shape=(discrete_size,discrete_size))
 max_path_length=30
 current_pose = [0,0]
 max_number_demos = 50
