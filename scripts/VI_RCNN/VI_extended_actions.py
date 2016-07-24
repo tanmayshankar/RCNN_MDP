@@ -2,18 +2,21 @@
 
 from variables import *
 
+action_size = 9
 reward_function = reward_function.reshape((action_size,discrete_size,discrete_size))
-action_reward_function = copy.deepcopy(reward_function)
-action_size = 9 
+action_size = 8
+action_reward_function = npy.zeros(shape=(action_size,discrete_size,discrete_size))
+action_value_layers  = npy.zeros(shape=(action_size,discrete_size,discrete_size))
+q_value_layers  = npy.zeros(shape=(action_size,discrete_size,discrete_size))
 
-time_limit = 40
+time_limit = 100
 
-trans_mat_1 = npy.zeros((action_size,transition_space,transition_space))
+# trans_mat_1 = npy.zeros((action_size,transition_space,transition_space))
 
-for i in range(0,action_size-1):
-	trans_mat_1[i] = trans_mat[i]
-trans_mat_1[action_size-1,1,1]=1.
-trans_mat = copy.deepcopy(trans_mat_1)
+# for i in range(0,action_size):
+# 	trans_mat_1[i] = trans_mat[i]
+# # trans_mat_1[action_size-1,1,1]=1.
+# trans_mat = copy.deepcopy(trans_mat_1)
 
 def modify_trans_mat(): 
 	global trans_mat
@@ -25,6 +28,11 @@ def modify_trans_mat():
 	for i in range(0,action_size):
 		trans_mat[i] = npy.fliplr(trans_mat[i])
 		trans_mat[i] = npy.flipud(trans_mat[i])
+
+def create_action_reward():
+	global action_reward_function, reward_function
+	for i in range(0,action_size):
+		action_reward_function[i]=reward_function[i]
 
 def initialize():
 	modify_trans_mat()
@@ -55,6 +63,7 @@ def conv_layer():
 def recurrent_value_iteration():
 	global value_function
 	t=0	
+
 	while (t<time_limit):
 		conv_layer()
 		t+=1
@@ -75,10 +84,10 @@ def bound_policy():
 
 bound_policy()
 
-with file('action_reward_function.txt','w') as outfile: 
-	for data in action_reward_function:
-		outfile.write('#Action Reward Function.\n')
-		npy.savetxt(outfile,data,fmt='%-7.2f')
+# with file('action_reward_function.txt','w') as outfile: 
+# 	for data in action_reward_function:
+# 		outfile.write('#Action Reward Function.\n')
+# 		npy.savetxt(outfile,data,fmt='%-7.2f')
 
 with file('output_policy.txt','w') as outfile: 
 	outfile.write('#Policy.\n')

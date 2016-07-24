@@ -77,9 +77,9 @@ def bound_policy():
 
 bound_policy()
 
-with file('reward_function.txt','w') as outfile: 
-	outfile.write('#Reward Function.\n')
-	npy.savetxt(outfile,reward_function,fmt='%-7.2f')
+# with file('reward_function.txt','w') as outfile: 
+# 	outfile.write('#Reward Function.\n')
+# 	npy.savetxt(outfile,reward_function,fmt='%-7.2f')
 
 with file('action_reward_function.txt','w') as outfile: 
 	for data in action_reward_function:
