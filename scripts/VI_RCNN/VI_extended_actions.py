@@ -2,7 +2,7 @@
 
 from variables import *
 
-action_size = 9
+action_size = 8
 reward_function = reward_function.reshape((action_size,discrete_size,discrete_size))
 action_size = 8
 action_reward_function = npy.zeros(shape=(action_size,discrete_size,discrete_size))
