@@ -154,13 +154,13 @@ def simulated_model(action_index):
 	remap_index = remap_indices(bucket_index)
 	
 	if (bucket_index!=((transition_space**2)/2)):
-		current_pose[0] = min(48,max(2,current_pose[0]+action_space[remap_index][0]))
-		current_pose[1] = min(48,max(2,current_pose[1]+action_space[remap_index][1]))
-		# current_pose[0] += action_space[remap_index][0]
-		# current_pose[1] += action_space[remap_index][1]
+		# current_pose[0] = min(48,max(2,current_pose[0]+action_space[remap_index][0]))
+		# current_pose[1] = min(48,max(2,current_pose[1]+action_space[remap_index][1]))
+		current_pose[0] += action_space[remap_index][0]
+		current_pose[1] += action_space[remap_index][1]
 				
-	target_belief[:,:] = 0. 
-	target_belief[current_pose[0],current_pose[1]]=1.
+	# target_belief[:,:] = 0. 
+	# target_belief[current_pose[0],current_pose[1]]=1.
 	 
 def simulated_observation_model():
 	global observation_model, obs_bucket_space, obs_bucket_index, observed_state, current_pose
@@ -182,31 +182,34 @@ def simulated_observation_model():
 		observed_state[0] += action_space[remap_index,0]
 		observed_state[1] += action_space[remap_index,1]
 
-# def calc_intermed_bel():
-# 	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel, corr_to_state_belief
-	
-# 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
-# 	h = obs_space/2
-# 	for i in range(-h,h+1):
-# 		for j in range(-h,h+1):
-# 			# dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
-# 			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - corr_to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
-# 	intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+	target_belief[:,:] = 0. 
+	target_belief[observed_state[0],observed_state[1]]=1.
 
 def calc_intermed_bel():
 	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel, corr_to_state_belief
 	
+	dummy = npy.zeros(shape=(discrete_size,discrete_size))
 	h = obs_space/2
-	dummy = npy.zeros(shape=(discrete_size+2*h,discrete_size+2*h))
-	
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
 			# dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
-			# dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - corr_to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
-			dummy[observed_state[0]+i+h,observed_state[1]+h+j] = (target_belief[observed_state[0]+i+h,observed_state[1]+j+h] - corr_to_state_belief[observed_state[0]+i+h,observed_state[1]+h+j]) * observation_model[h+i,h+j]
+			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - corr_to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
+	intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
-	intermed_bel[:,:] = copy.deepcopy(dummy[h:discrete_size+h,h:discrete_size+h])
-	intermed_bel /= intermed_bel.sum()
+# def calc_intermed_bel():
+# 	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel, corr_to_state_belief
+	
+# 	h = obs_space/2
+# 	dummy = npy.zeros(shape=(discrete_size+2*h,discrete_size+2*h))
+	
+# 	for i in range(-h,h+1):
+# 		for j in range(-h,h+1):
+# 			# dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
+# 			# dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - corr_to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
+# 			dummy[observed_state[0]+i+h,observed_state[1]+h+j] = (target_belief[observed_state[0]+i+h,observed_state[1]+j+h] - corr_to_state_belief[observed_state[0]+i+h,observed_state[1]+h+j]) * observation_model[h+i,h+j]
+
+# 	intermed_bel[:,:] = copy.deepcopy(dummy[h:discrete_size+h,h:discrete_size+h])
+# 	intermed_bel /= intermed_bel.sum()
 	# intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calc_sensitivity():
