@@ -156,6 +156,7 @@ def calc_sensitivity():
 	global from_state_ext, sens_belief
 
 	sens_belief = copy.deepcopy(from_state_ext)
+
 	sens_belief = npy.fliplr(sens_belief)
 	sens_belief = npy.flipud(sens_belief)
 

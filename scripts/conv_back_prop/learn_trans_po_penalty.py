@@ -303,17 +303,18 @@ def input_actions():
 		action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
 		## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
-		if (current_pose[0]==49)or(current_pose[0]==48):
-			action_index=0
-		elif (current_pose[0]==0)or(current_pose[0]==1):
-			action_index=1
-		elif (current_pose[1]==49)or(current_pose[1]==48):
-			action_index=2
-		elif (current_pose[1]==0)or(current_pose[1]==1):
-			action_index=3
-		else:
-			action_index=iterate%8
+		# if (current_pose[0]==49)or(current_pose[0]==48):
+		# 	action_index=0
+		# elif (current_pose[0]==0)or(current_pose[0]==1):
+		# 	action_index=1
+		# elif (current_pose[1]==49)or(current_pose[1]==48):
+		# 	action_index=2
+		# elif (current_pose[1]==0)or(current_pose[1]==1):
+		# 	action_index=3
+		# else:
+		# 	action_index=iterate%8
 
+		action_index = iterate % 8
 		print "Iteration:",iterate," Current pose:",current_pose,"Observed State:",observed_state," Action:",action_index
 		master(action_index, iterate)
 

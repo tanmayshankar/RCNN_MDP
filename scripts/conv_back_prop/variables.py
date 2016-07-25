@@ -12,6 +12,12 @@ import copy
 basis_size = 3
 discrete_size = 50
 
+learning_rate = float(sys.argv[1])
+annealing_rate = float(sys.argv[2])
+
+# learning_rate = 0.05
+# annealing_rate = 8*(learning_rate/5)/time_limit
+
 #Action size also determines number of convolutional filters. 
 action_size = 8
 action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
@@ -64,9 +70,9 @@ observed_state = npy.zeros(2)
 state_counter = 0
 action = 'w'
 
-learning_rate = 0.05
-annealing_rate = 8*(learning_rate/5)/time_limit
 time_count = npy.zeros(action_size)
 lamda_vector = 0*npy.ones(action_size)
+rms_decay=0.9
 
 norm_sum_bel=0.
+lamda = 1

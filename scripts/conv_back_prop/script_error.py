@@ -47,16 +47,32 @@ def initialize_observation():
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
 
-def bayes_obs_fusion():
-	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
+# def bayes_obs_fusion():
+# 	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
 	
-	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+# 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+# 	h = obs_space/2
+# 	for i in range(-h,h+1):
+# 		for j in range(-h,h+1):
+# 			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
+# 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+# 	norm_sum_bel = dummy.sum()
+
+def bayes_obs_fusion():
+	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief
+	
 	h = obs_space/2
+	intermediate_belief = npy.zeros((discrete_size+2*h,discrete_size+2*h))
+	ext_to_bel = npy.zeros((discrete_size+2*h,discrete_size+2*h))
+	ext_to_bel[h:discrete_size+h,h:discrete_size+h] = copy.deepcopy(to_state_belief[:,:])
+
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
-			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
-	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
-	norm_sum_bel = dummy.sum()
+			intermediate_belief[h+observed_state[0]+i,h+observed_state[1]+j] = ext_to_bel[h+observed_state[0]+i,h+observed_state[1]+j] * observation_model[h+i,h+j]
+	
+	# corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[:,:])
+	corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[h:h+discrete_size,h:h+discrete_size])
+	corr_to_state_belief /= corr_to_state_belief.sum()
 
 def remap_indices(dummy_index):
 
@@ -149,8 +165,8 @@ def simulated_model(action_index):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
 				
-	target_belief[:,:] = 0. 
-	target_belief[current_pose[0],current_pose[1]]=1.
+	# target_belief[:,:] = 0. 
+	# target_belief[current_pose[0],current_pose[1]]=1.
 	 
 def simulated_observation_model():
 	global observation_model, obs_bucket_space, obs_bucket_index, observed_state, current_pose
@@ -172,6 +188,9 @@ def simulated_observation_model():
 		observed_state[0] += action_space[remap_index,0]
 		observed_state[1] += action_space[remap_index,1]	
 
+	target_belief[:,:] = 0. 
+	target_belief[observed_state[0],observed_state[1]]=1.
+
 def belief_prop(action_index):
 	global trans_mat_unknown, to_state_belief, from_state_belief	
 
@@ -187,7 +206,7 @@ def calc_intermed_bel():
 
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
-			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
+			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - corr_to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
 	intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calc_sensitivity():
@@ -277,7 +296,8 @@ def compute_error():
 	dummy_trans_2 = copy.deepcopy(trans_mat_unknown)
 	dummy_trans_2 -= trans_mat
 	
-	mean_error = -(npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:]) + (1-trans_mat[:,:])*npy.log(1 - dummy_trans[:,:] )))
+	mean_error = -(npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:])))
+	# mean_error = -(npy.sum(trans_mat[:,:] * npy.log(dummy_trans[:,:]) + (1-trans_mat[:,:])*npy.log(1 - dummy_trans[:,:] )))
 	std_dev = npy.sqrt(npy.sum(dummy_trans_2[action_index]**2)/(transition_space**2))	
 
 	print "Error: ", mean_error, std_dev
@@ -298,13 +318,12 @@ initialize_all()
 input_actions()
 penalty_weights()
 
-print "Learnt Transition Model:\n", trans_mat_unknown
-
 with file('unnorm_transition.txt','w') as outfile: 
 	for data_slice in trans_mat_unknown:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
+print "Learnt Transition Model:\n", trans_mat_unknown
 for i in range(0,8):
 	trans_mat_unknown[i,:,:] /= trans_mat_unknown[i,:,:].sum()
 print "Normalized Transition Model:\n",trans_mat_unknown	

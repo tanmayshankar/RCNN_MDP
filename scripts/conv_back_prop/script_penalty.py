@@ -47,16 +47,32 @@ def initialize_observation():
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
 
-def bayes_obs_fusion():
-	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
+# def bayes_obs_fusion():
+# 	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief, norm_sum_bel
 	
-	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+# 	dummy = npy.zeros(shape=(discrete_size,discrete_size))
+# 	h = obs_space/2
+# 	for i in range(-h,h+1):
+# 		for j in range(-h,h+1):
+# 			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
+# 	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
+# 	norm_sum_bel = dummy.sum()
+
+def bayes_obs_fusion():
+	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief
+	
 	h = obs_space/2
+	intermediate_belief = npy.zeros((discrete_size+2*h,discrete_size+2*h))
+	ext_to_bel = npy.zeros((discrete_size+2*h,discrete_size+2*h))
+	ext_to_bel[h:discrete_size+h,h:discrete_size+h] = copy.deepcopy(to_state_belief[:,:])
+
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
-			dummy[observed_state[0]+i,observed_state[1]+j] = to_state_belief[observed_state[0]+i,observed_state[1]+j] * observation_model[h+i,h+j]
-	corr_to_state_belief[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
-	norm_sum_bel = dummy.sum()
+			intermediate_belief[h+observed_state[0]+i,h+observed_state[1]+j] = ext_to_bel[h+observed_state[0]+i,h+observed_state[1]+j] * observation_model[h+i,h+j]
+	
+	# corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[:,:])
+	corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[h:h+discrete_size,h:h+discrete_size])
+	corr_to_state_belief /= corr_to_state_belief.sum()
 
 def remap_indices(dummy_index):
 
@@ -151,8 +167,8 @@ def simulated_model(action_index):
 		current_pose[0] += action_space[remap_index][0]
 		current_pose[1] += action_space[remap_index][1]
 				
-	target_belief[:,:] = 0. 
-	target_belief[current_pose[0],current_pose[1]]=1.
+	# target_belief[:,:] = 0. 
+	# target_belief[current_pose[0],current_pose[1]]=1.
 	 
 def simulated_observation_model():
 	global observation_model, obs_bucket_space, obs_bucket_index, observed_state, current_pose
@@ -174,12 +190,15 @@ def simulated_observation_model():
 		observed_state[0] += action_space[remap_index,0]
 		observed_state[1] += action_space[remap_index,1]	
 
-def belief_prop(action_index):
-	global trans_mat_unknown, to_state_belief, from_state_belief	
+	target_belief[:,:] = 0. 
+	target_belief[observed_state[0],observed_state[1]]=1.
 
-	to_state_belief = signal.convolve2d(from_state_belief,trans_mat_unknown[action_index],'same','fill',0)
-	if (to_state_belief.sum()<1.):
-		to_state_belief /= to_state_belief.sum()	
+# def belief_prop(action_index):
+# 	global trans_mat_unknown, to_state_belief, from_state_belief	
+
+# 	to_state_belief = signal.convolve2d(from_state_belief,trans_mat_unknown[action_index],'same','fill',0)
+# 	if (to_state_belief.sum()<1.):
+# 		to_state_belief /= to_state_belief.sum()	
 
 def calc_intermed_bel():	
 	global to_state_belief, target_belief, observation_model, obs_space, observed_state, intermed_bel
@@ -189,7 +208,7 @@ def calc_intermed_bel():
 
 	for i in range(-h,h+1):
 		for j in range(-h,h+1):
-			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
+			dummy[observed_state[0]+i,observed_state[1]+j] = (target_belief[observed_state[0]+i,observed_state[1]+j] - corr_to_state_belief[observed_state[0]+i,observed_state[1]+j]) * observation_model[h+i,h+j]
 	intermed_bel[:,:] = copy.deepcopy(dummy[:,:]/dummy.sum())
 
 def calc_sensitivity():
@@ -216,10 +235,14 @@ def back_prop_conv_KKT(action_index, time_index):
 	grad_update[:,:] += lamda*(trans_mat_unknown[action_index,:,:].sum() - 1.)
 	# # lamda_vector[action_index] -= alpha * ((trans_mat_unknown[action_index,:,:].sum()-1.)**2)
 
+	# for m in range(-w,w+1):
+	# 	for n in range(-w,w+1):
+	# 		if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
+	# 			trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
+
 	for m in range(-w,w+1):
 		for n in range(-w,w+1):
-			if (trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]>=0)and(trans_mat_unknown[action_index,w+m,w+n] - alpha*grad_update[w+m,w+n]<=1):
-				trans_mat_unknown[action_index,w+m,w+n] -= alpha*grad_update[w+m,w+n]
+			trans_mat_unknown[action_index,w+m,w+n] = max(0,min(1,trans_mat_unknown[action_index,w+m,w+n]-alpha*grad_update[w+m,w+n]))
 
 	# penalty = 1
 
@@ -285,9 +308,8 @@ def flip_trans_again():
 		trans_mat_unknown[i] = npy.fliplr(trans_mat_unknown[i])
 		trans_mat_unknown[i] = npy.flipud(trans_mat_unknown[i])
 
-
 input_actions()
-
+	
 def penalty_weights():
 	global lamda
 	for i in npy.linspace(0.1,10,51):
@@ -322,3 +344,9 @@ with file('estimated_transition.txt','w') as outfile:
 		outfile.write('#Transition Function.\n')
 		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
+lin_array = npy.zeros((action_size,transition_space**2))
+
+for k in range(0,action_size):
+	for i in range(0,transition_space):
+		for j in range(0,transition_space):
+			lin_array[k,transition_space*i+j]=trans_mat_unknown[k,i,j]
