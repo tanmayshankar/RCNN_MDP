@@ -9,33 +9,14 @@ def initialize_state():
 	from_state_belief = npy.zeros((discrete_size,discrete_size))
 	from_state_belief[observed_state[0],observed_state[1]] = 1.
 
-	# for i in range(-h,h+1):
-	# 	for j in range(-h,h+1):
-	# 		from_state_belief[observed_state[0]+i,observed_state[1]+j] = observation_model[h+i,h+j]
-
 def initialize_observation():
 	global observation_model
-	# observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
+
 	observation_model = npy.array([[0.05,0.1,0.05],[0.1,1,0.1],[0.05,0.1,0.05]])
 
 	epsilon=0.0001
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
-
-def display_beliefs():
-	global from_state_belief,to_state_belief,current_pose
-
-	print "From:"
-	for i in range(observed_state[0]-5,observed_state[0]+5):
-		print from_state_belief[i,observed_state[1]-5:observed_state[1]+5]
-	
-	print "To:"
-	for i in range(observed_state[0]-5,observed_state[0]+5):
-		print to_state_belief[i,observed_state[1]-5:observed_state[1]+5]
-
-	print "Corrected:"
-	for i in range(observed_state[0]-5,observed_state[0]+5):
-		print corr_to_state_belief[i,observed_state[1]-5:observed_state[1]+5]
 
 def bayes_obs_fusion():
 	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief
@@ -49,14 +30,12 @@ def bayes_obs_fusion():
 		for j in range(-h,h+1):
 			intermediate_belief[h+observed_state[0]+i,h+observed_state[1]+j] = ext_to_bel[h+observed_state[0]+i,h+observed_state[1]+j] * observation_model[h+i,h+j]
 	
-	# corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[:,:])
 	corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[h:h+discrete_size,h:h+discrete_size])
 	corr_to_state_belief /= corr_to_state_belief.sum()
 
 	if (intermediate_belief.sum()==0):
-		print "Something's wrong."
-		# display_beliefs()
-		print npy.unravel_index(from_state_belief.argmax(),from_state_belief.shape)
+		print "Belief Sum 0."
+		# print npy.unravel_index(from_state_belief.argmax(),from_state_belief.shape)
 
 def initialize_all():
 	initialize_observation()
@@ -94,8 +73,6 @@ def belief_update_QMDP_values():
 	global to_state_belief, q_value_estimate, qmdp_values, from_state_belief, backprop_belief
 
 	for act in range(0,action_size):
-		# qmdp_values[act] = npy.sum(q_value_estimate[act]*to_state_belief)
-		# qmdp_values[act] = npy.sum(q_value_estimate[act]*from_state_belief)
 		qmdp_values[act] = npy.sum(q_value_estimate[act]*backprop_belief)
 
 def belief_reward_backprop():
@@ -121,7 +98,6 @@ def parse_data(traj_ind,len_ind):
 	global observed_state, trajectory_index, length_index, target_actions, current_pose, trajectories
 
 	observed_state[:] = observed_trajectories[traj_ind,len_ind+1,:]
-	# observed_state[:] = trajectories[traj_ind,len_ind+1,:]
 	target_actions[:] = 0
 	target_actions[actions_taken[traj_ind,len_ind]] = 1
 	current_pose[:] = trajectories[traj_ind,len_ind,:]
@@ -145,13 +121,11 @@ def conv_layer():
 
 	for act in range(0,action_size):		
 		#Convolve with each transition matrix.
-		# action_value_layers[act]=signal.convolve2d(value_function,trans_mat[act],'same','fill',0)
 		trans_mat_flip[act] = npy.flipud(npy.fliplr(trans_mat[act]))
 		q_value_layers[act]=signal.convolve2d(value_function,trans_mat_flip[act],'same','fill',0)
 
 def store_belief(len_ind):
 	global from_state_belief, to_state_belief, from_belief_vector
-
 	from_belief_vector[len_ind] = copy.deepcopy(from_state_belief)
 
 def parse_backprop_index(traj_ind,len_ind):
@@ -197,7 +171,7 @@ def Inverse_Q_Learning():
 		parse_data(trajectory_index,0)
 		initialize_state()
 
-		print "Trajectory: ", trajectory_index, "Step:", length_index
+		print "Trajectory: ", trajectory_index
 
 		for length_index in range(0,trajectory_length-1):			
 			
@@ -213,21 +187,11 @@ def Inverse_Q_Learning():
 			length_index = random.choice(index_list)
 			parse_backprop_index(trajectory_index, length_index)
 			backprop()
-			index_list.remove(length_index)
-
-			# print "Index: ", length_index
+			index_list.remove(length_index)	
 
 		feedback()
 
-		traj_index_list.remove(trajectory_index)
-
-		# imshow(q_value_estimate[0], interpolation='nearest', origin='lower', extent=[0,50,0,50], aspect='auto')
-		# # plt.show(block=False)
-		# colorbar()
-		# plt.show()
-		# # plt.title('Trajectory Index: %i')
-		# # draw()
-		# # show() 
+		traj_index_list.remove(trajectory_index)	
 
 parse_data(0,0)
 initialize_all()
