@@ -107,11 +107,11 @@ for arate in aspace:
             movethings(arate,i)
             
 def movethings(arate,trial):
-    shutil.move("estimated_transition.txt","data/BP_Experiments/Linear_Decay/LR_0.2/AR_{0}/estimated_trans_{1}.txt".format(arate,trial))
+    shutil.move("estimated_transition.txt","data/BP_Experiments/Linear_Decay/LR_0.4/AR_{0}/estimated_trans_{1}.txt".format(arate,trial))
     
 for arate in aspace:
     for i in range(1,6):
-        command = "scripts/conv_back_prop/learn_trans_po_penalty.py 0.2 {0}".format(arate)
+        command = "scripts/conv_back_prop/learn_trans_po_penalty.py 0.4 {0}".format(arate)
         subprocess.call(command.split(),shell=False)
         if (os.path.isfile("estimated_transition.txt")):
             movethings(arate,i)
