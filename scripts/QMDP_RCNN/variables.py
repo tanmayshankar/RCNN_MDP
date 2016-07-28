@@ -9,6 +9,8 @@ import copy
 
 ###### DEFINITIONS
 discrete_size = 50
+number_trajectories = 47
+trajectory_length = 30
 
 #Action size also determines number of convolutional filters. 
 action_size = 9
@@ -59,9 +61,6 @@ value_function = npy.zeros((discrete_size,discrete_size))
 
 qmdp_values = npy.zeros(action_size)
 qmdp_values_softmax = npy.zeros(action_size)
-
-number_trajectories = 97
-trajectory_length = 30
 
 trajectories = npy.loadtxt(str(sys.argv[2]))
 trajectories = trajectories.reshape((number_trajectories,trajectory_length,2))
