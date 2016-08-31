@@ -7,14 +7,13 @@ def initialize_state():
 	current_pose=[24,24]
 	from_state_belief[24,24]=1.
 
-
 def initialize_transitions():
 	global trans_mat
 	trans_mat_1 = npy.array([[0.,0.7,0.],[0.1,0.1,0.1],[0.,0.,0.]])
 	trans_mat_2 = npy.array([[0.7,0.1,0.],[0.1,0.1,0.],[0.,0.,0.]])
 	
 	#Adding epsilon so that the cummulative distribution has unique values. 
-	epsilon=0.00001
+	epsilon=0.001
 	trans_mat_1+=epsilon
 	trans_mat_2+=epsilon
 
@@ -37,21 +36,19 @@ def initialize_unknown_transitions():
 	for i in range(0,transition_space):
 		for j in range(0,transition_space):
 			trans_mat_unknown[:,i,j] = random.random()
-			
+			# trans_mat_unknown[:,i,j] = 1.
 	for i in range(0,action_size):
 		trans_mat_unknown[i,:,:] /=trans_mat_unknown[i,:,:].sum()
 
 def initialize_observation():
 	global observation_model
-	observation_model = npy.array([[0.,0.05,0.],[0.05,0.8,0.05],[0.,0.05,0.]])
-	# observation_model = npy.zeros((3,3))
-	# observation_model[1,1]=1
+	observation_model = npy.array([[0.05,0.05,0.05],[0.05,0.6,0.05],[0.05,0.05,0.05]])
 	
-	epsilon=0.00001
+	epsilon=0.0001
 	observation_model += epsilon
 	observation_model /= observation_model.sum()
 
-def bayes_obs_fusion(t):
+def bayes_obs_fusion():
 	global to_state_belief, current_pose, observation_model, obs_space, observed_state, corr_to_state_belief
 	
 	h = obs_space/2
@@ -63,12 +60,8 @@ def bayes_obs_fusion(t):
 		for j in range(-h,h+1):
 			intermediate_belief[h+observed_state[0]+i,h+observed_state[1]+j] = ext_to_bel[h+observed_state[0]+i,h+observed_state[1]+j] * observation_model[h+i,h+j]
 	
-	epsilon = 0.00001
+	# corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[:,:])
 	corr_to_state_belief[:,:] = copy.deepcopy(intermediate_belief[h:h+discrete_size,h:h+discrete_size])
-	corr_to_state_belief += epsilon 
-
-	if (corr_to_state_belief.sum()<=0):
-		print "THIS TIME: ", t, "We're going to have a problem."		
 	corr_to_state_belief /= corr_to_state_belief.sum()
 
 def remap_indices(dummy_index):
@@ -111,15 +104,7 @@ def initialize_obs_model_bucket():
 			obs_cummulative += observation_model[i,j]
 			obs_bucket_space[obs_space*i+j] = obs_cummulative
 
-	# print obs_bucket_space
-
-def initialize_belief():
-	global observation_model, from_state_belief
-	h=obs_space/2
-
-	for i in range(-h,h+1):
-		for j in range(-h,h+1):
-			from_state_belief[observed_state[0]+i,observed_state[1]+j] = observation_model[h+i,h+j]
+	print obs_bucket_space
 
 def initialize_all():
 	initialize_state()
@@ -128,7 +113,6 @@ def initialize_all():
 	initialize_unknown_transitions()
 	initialize_model_bucket()
 	initialize_obs_model_bucket()
-	initialize_belief()
 
 def construct_from_ext_state():
 	global from_state_ext, from_state_belief,discrete_size
@@ -317,9 +301,24 @@ def recurrence():
 	global from_state_belief,target_belief
 	from_state_belief = copy.deepcopy(target_belief)
 
-def output_recurrence():
-	global from_state_belief,target_belief
-	from_state_belief = copy.deepcopy(corr_to_state_belief)
+# def output_recurrence():
+# 	global from_state_belief,target_belief
+# 	from_state_belief = copy.deepcopy(to_state_belief)
+
+def master(action_index, time_index):
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
+
+	construct_from_ext_state()
+	belief_prop_extended(action_index)
+	bayes_obs_fusion()
+
+	simulated_model(action_index)
+	# simulated_observation_model()
+
+	# back_prop_conv_KKT(action_index, time_index)
+	learn_trans_naive(action_index)
+	recurrence()	
+	# output_recurrence()
 
 initialize_all()
 
@@ -328,29 +327,50 @@ def master_weighted_counting(action_index,time_index):
 
 	construct_from_ext_state()
 	belief_prop_extended(action_index)
-	bayes_obs_fusion(time_index)
+	bayes_obs_fusion()
 
 	simulated_model(action_index)
 	simulated_observation_model()
 
 	# back_prop_conv_KKT(action_index, time_index)
 	learn_trans_weighted(action_index, time_index)
-	# recurrence()	
+	recurrence()	
 
-	# print "time_index", time_index
-	output_recurrence()	
+def master_naive_counting(action_index, time_index):
+	global trans_mat_unknown, to_state_belief, from_state_belief, target_belief, current_pose
+
+	simulated_model(action_index)
+	simulated_observation_model()
+
+	learn_trans_naive(action_index)
+
 
 def input_actions():
 	global action, state_counter, action_index, current_pose
+
 	iterate=0
 
 	while (iterate<=time_limit):		
 		iterate+=1	
 		
-		# action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
+		action_space = npy.array([[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]])
 		## UP, DOWN, LEFT, RIGHT, UPLEFT, UPRIGHT, DOWNLEFT, DOWNRIGHT..
 
+		# if (current_pose[0]==49)or(current_pose[0]==48):
+		# 	action_index=0
+		# elif (current_pose[0]==0)or(current_pose[0]==1):
+		# 	action_index=1
+		# elif (current_pose[1]==49)or(current_pose[1]==48):
+		# 	action_index=2
+		# elif (current_pose[1]==0)or(current_pose[1]==1):
+		# 	action_index=3
+		# else:
+		# 	action_index=iterate%8
+
 		action_index = iterate % 8
+		print "Iteration:",iterate," Current pose:",current_pose,"Observed State:",observed_state," Action:",action_index
+		# master(action_index, iterate)
+		# master_naive_counting(action_index, iterate)
 		master_weighted_counting(action_index, iterate)
 
 input_actions()
@@ -367,21 +387,21 @@ print "Learnt Transition Model:\n", trans_mat_unknown
 with file('unnorm_transition.txt','w') as outfile: 
 	for data_slice in trans_mat_unknown:
 		outfile.write('#Transition Function.\n')
-		npy.savetxt(outfile,data_slice,fmt='%-7.4f')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
 for i in range(0,8):
 	trans_mat_unknown[i,:,:] /= trans_mat_unknown[i,:,:].sum()
 print "Normalized Transition Model:\n",trans_mat_unknown	
-# print "Actual Transition Model:\n" , trans_mat
+print "Actual Transition Model:\n" , trans_mat
 
 with file('actual_transition.txt','w') as outfile: 
 	for data_slice in trans_mat:
 		outfile.write('#Transition Function.\n')
-		npy.savetxt(outfile,data_slice,fmt='%-7.4f')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
 with file('estimated_transition.txt','w') as outfile: 
 	for data_slice in trans_mat_unknown:
 		outfile.write('#Transition Function.\n')
-		npy.savetxt(outfile,data_slice,fmt='%-7.4f')
+		npy.savetxt(outfile,data_slice,fmt='%-7.2f')
 
 
