@@ -78,4 +78,27 @@ def Replan_movethings(i):
 
 #RUNNING REPLANNING FOR EVALUATION of POLICIES in terms of Expected Reward
 
-def eval_movethings():
+def movethings(i):
+	shutil.move("output_policy.txt","data/QMDP_Experiments/No_Ex_Rep/reward_{0}/Replan/URUT/output_policy.txt".format(i))
+	shutil.move("value_function.txt","data/QMDP_Experiments/No_Ex_Rep/reward_{0}/Replan/URUT/value_function.txt".format(i))
+
+for i in range(1,26):
+	command = "scripts/VI_RCNN/VI_beta_ext_reward.py data/QMDP_Experiments/No_Ex_Rep/reward_{0}/IRL/Reward_Function_Estimate.txt data/learnt_models/estimated_trans_PO_NEW.txt".format(i)
+	subprocess.call(command.split(),shell=False)	
+	movethings(i)
+	print 'Iteration:', i
+
+def copythings(i):
+	shutil.copy("Original/reward_{0}/output_policy.txt".format(i),"Feedback/reward_{0}/output_policy.txt".format(i))
+	shutil.copy("Original/reward_{0}/value_function.txt".format(i),"Feedback/reward_{0}/value_function.txt".format(i))
+	shutil.copy("Original/reward_{0}/reward_{0}.txt".format(i),"Feedback/reward_{0}/reward_{0}.txt".format(i))
+
+def copythings(i):
+	shutil.copy("Original/reward_{0}/Trajectories/Trajectories.txt".format(i),"Adapt_Learning_Rate/reward_{0}/Trajectories/Trajectories.txt".format(i))
+	shutil.copy("Original/reward_{0}/Trajectories/Observed_Trajectories.txt".format(i),"Adapt_Learning_Rate/reward_{0}/Trajectories/Observed_Trajectories.txt".format(i))
+	shutil.copy("Original/reward_{0}/Trajectories/Actions_Taken.txt".format(i),"Adapt_Learning_Rate/reward_{0}/Trajectories/Actions_Taken.txt".format(i))
+
+for i in range(1,26):
+    os.mkdir("RMSProp/reward_{0}/Replan/UTKR".format(i))
+    os.mkdir("Experience_Replay/reward_{0}/Replan/UTKR".format(i))
+    os.mkdir("No_Feedback/reward_{0}/Replan/UTKR".format(i))
