@@ -1,6 +1,6 @@
-# Reinforcement Learning via Recurrent Convolutional Neural Network Architectures
+# Reinforcement Learning via Recurrent Convolutional Neural Networks
 
-This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. Guha, Reinforcement Learning via Recurrent Convolutional Neural Network Architectures, accepted at ICPR 2016. 
+This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. Guha, Reinforcement Learning via Recurrent Convolutional Neural Networks, accepted at ICPR 2016. 
 
 This code base targets the following problems: 
 
