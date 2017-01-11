@@ -2,6 +2,8 @@
 
 This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. Guha, Reinforcement Learning via Recurrent Convolutional Neural Network Architectures, accepted at ICPR 2016. 
 
+[Click here to view the paper on ArXiv](https://arxiv.org/abs/1701.02392)
+
 This code base targets the following problems: 
 
 1. Solving Value / Policy Iteration in a standard MDP using Feedforward passes of a Value Iteration RCNN. 
