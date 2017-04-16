@@ -11,7 +11,7 @@ from scipy import signal
 import copy
 
 basis_size = 3
-discrete_size = 500
+discrete_size = 50
 
 #Action size also determines number of convolutional filters. 
 action_size = 8
@@ -22,7 +22,7 @@ transition_space = 3
 
 reward_function = npy.loadtxt(str(sys.argv[1]))
 trans_mat = npy.loadtxt(str(sys.argv[2]))
-# trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))	
+trans_mat = trans_mat.reshape((action_size,transition_space,transition_space))	
 
 value_function = npy.zeros(shape=(discrete_size,discrete_size))
 optimal_policy = npy.zeros(shape=(discrete_size,discrete_size))
