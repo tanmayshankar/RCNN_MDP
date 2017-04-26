@@ -1,16 +1,20 @@
 # Reinforcement Learning via Recurrent Convolutional Neural Networks
 
-This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. Guha, Reinforcement Learning via Recurrent Convolutional Neural Networks, accepted at ICPR 2016. 
+**So what's this all about?**
+This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. Guha, Reinforcement Learning via Recurrent Convolutional Neural Networks, published at ICPR 2016. 
 
-[Click here to view the paper on ArXiv](https://arxiv.org/abs/1701.02392)
+**Where can I read this cool paper?**
+[Click here to view the paper on ArXiv!](https://arxiv.org/abs/1701.02392) 
 
+**I want a TL;DR of what this repository does.**
 This code base targets the following problems: 
 
-1. Solving Value / Policy Iteration in a standard MDP using Feedforward passes of a Value Iteration RCNN. 
+1. Solving Value / Policy Iteration in a standard MDP using feedforward passes of a Value Iteration RCNN. 
 - Representing the Bayes Filter state belief update as feedforward passes of a Belief Propagation RCNN. 
 - Learning the State Transition models in a POMDP setting, using backpropagation on the Belief Propagation RCNN. 
 - Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations, using a QMDP RCNN. 
 
+**Sure, but I just want to run code!**
 To run any of the code, clone this repository to a local directory, and make sure you have Python >= 2.7 installed. Follow the following instructions to run code specific to any of the given problems. 
 
 **Value Iteration RCNN**
