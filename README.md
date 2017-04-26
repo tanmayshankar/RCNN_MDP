@@ -15,8 +15,7 @@ This code base targets the following problems:
 4. Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations, using a QMDP RCNN. 
 
 ### Is that all? ###
-Yes and no. I'm working on an extension to this framework, you can check out this repository of mine for it! 
-https://github.com/tanmayshankar/DeepVectorPolicyFields
+Yes and no. I'm working on an extension to this framework, you can check out https://github.com/tanmayshankar/DeepVectorPolicyFields for more! 
 
 ### Can I use this code to pretend I did some research? ###
 Feel free to use my code, but please remember to cite my paper above (and this repository)! 
