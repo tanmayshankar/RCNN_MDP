@@ -14,10 +14,14 @@ This code base targets the following problems:
 3. Learning the State Transition models in a POMDP setting, using backpropagation on the Belief Propagation RCNN. 
 4. Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations, using a QMDP RCNN. 
 
+### Is that all? ###
+Yes and no. I'm working on an extension to this framework, you can check out this repository of mine for it! 
+https://github.com/tanmayshankar/DeepVectorPolicyFields
+
 ### Can I use this code to pretend I did some research? ###
 Feel free to use my code, but please remember to cite my paper above (and this repository)! 
 
-### Sure, but I just want to run code! ### 
+### Tell me how to run the code already! ### 
 To run any of the code, clone this repository to a local directory, and make sure you have Python >= 2.7 installed. Follow the following instructions to run code specific to any of the given problems. 
 
 **Value Iteration RCNN**
