@@ -1,6 +1,6 @@
 # Reinforcement Learning via Recurrent Convolutional Neural Networks
 
-****So what's this all about?****
+##So what's this all about?##
 This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. Guha, Reinforcement Learning via Recurrent Convolutional Neural Networks, published at ICPR 2016. 
 
 **Where can I read this cool paper?**
