@@ -10,12 +10,15 @@ This repository is code connected to the paper - T. Shankar, S. K. Dwivedy, P. G
 This code base targets the following problems: 
 
 1. Solving Value / Policy Iteration in a standard MDP using feedforward passes of a Value Iteration RCNN. 
-- Representing the Bayes Filter state belief update as feedforward passes of a Belief Propagation RCNN. 
-- Learning the State Transition models in a POMDP setting, using backpropagation on the Belief Propagation RCNN. 
-- Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations, using a QMDP RCNN. 
+2. Representing the Bayes Filter state belief update as feedforward passes of a Belief Propagation RCNN. 
+3. Learning the State Transition models in a POMDP setting, using backpropagation on the Belief Propagation RCNN. 
+4. Learning Reward Functions in an Inverse Reinforcement Learning framework from demonstrations, using a QMDP RCNN. 
 
 ### Sure, but I just want to run code! ### 
 To run any of the code, clone this repository to a local directory, and make sure you have Python >= 2.7 installed. Follow the following instructions to run code specific to any of the given problems. 
+
+### Can I use this code to pretend I did some research? ###
+Feel free to use my code, but please remember to cite my paper above (and this repository)! 
 
 **Value Iteration RCNN**
 
