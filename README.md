@@ -20,8 +20,15 @@ Yes and no. I'm working on an extension to this framework, you can check out htt
 ### Can I use this code to pretend I did some research? ###
 Feel free to use my code, but please remember to cite my paper above (and this repository)! 
 
+### I have a brilliant idea to make this even cooler! ###
+Awesome! Feel free to mail me at tanmay.shankar@gmail.com with your suggestions, feedback and ideas! 
+
 ### Tell me how to run the code already! ### 
 To run any of the code, clone this repository to a local directory, and make sure you have Python >= 2.7 installed. Follow the following instructions to run code specific to any of the given problems. 
+
+
+
+
 
 **Value Iteration RCNN**
 
